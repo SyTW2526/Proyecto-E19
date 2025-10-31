@@ -16,7 +16,7 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Ruta de prueba
 app.get("/", (req, res) => {
-  res.send("Servidor de tutorías funcionando 🚀");
+  res.send("Servidor de tutorías funcionando 🚀\n");
 });
 
 const PORT = process.env.PORT || 4000;
