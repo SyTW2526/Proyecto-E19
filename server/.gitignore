@@ -1,0 +1,20 @@
+# Node.js
+node_modules/
+
+# Environment files
+.env
+
+# Coverage
+coverage/
+
+
+# Editor / OS
+.vscode/
+
+# Caches
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+.serverless/
+.turbo/
