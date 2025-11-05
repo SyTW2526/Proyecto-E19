@@ -2,6 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
+import eventosRouter from "./routes/eventos.js";
 
 dotenv.config();
 
@@ -18,6 +19,8 @@ mongoose.connect(process.env.MONGO_URI)
 app.get("/", (req, res) => {
   res.send("Servidor de tutorías funcionando 🚀\n");
 });
+
+app.use("/api/eventos", eventosRouter);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
