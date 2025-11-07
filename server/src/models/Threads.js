@@ -4,7 +4,7 @@ const { Schema, model, Types } = mongoose;
 const ThreadSchema = new Schema({
   foro: { type: Types.ObjectId, ref: "Foro", required: true },
   title: { type: String, required: true, trim: true },
-  author: { type: Types.ObjectId, ref: "User", required: true },
+  author: { type: String, required: true },
   locked: { type: Boolean, default: false },
   sticky: { type: Boolean, default: false },
   tags: [String],

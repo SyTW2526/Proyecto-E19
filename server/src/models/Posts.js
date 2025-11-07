@@ -3,7 +3,7 @@ const { Schema, model, Types } = mongoose;
 
 const PostSchema = new Schema({
   thread: { type: Types.ObjectId, ref: "Thread", required: true },
-  author: { type: Types.ObjectId, ref: "User", required: true },
+  author: { type: String, required: true },
   body: { type: String, required: true },
   parent: { type: Types.ObjectId, ref: "Post", default: null }, // para anidado 
   edited: {

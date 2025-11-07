@@ -5,7 +5,7 @@ const EventoPersonalSchema = new Schema({
   title: { type: String, required: true, trim: true, maxlength: 200 },
   description: { type: String, trim: true },
   owner: { type: String, required: true }, 
-  participants: [{ type: Types.ObjectId, ref: "User" }],        // invitados
+  participants: [{ type: String }],        // invitados
   start: { type: Date, required: true },
   end: { type: Date, required: true },
   allDay: { type: Boolean, default: false },

@@ -3,6 +3,9 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import eventosRouter from "./routes/eventos.js";
+import forosRouter from "./routes/foro.js";
+import threadsRouter from "./routes/threads.js";
+import postsRouter from "./routes/posts.js";
 
 import path from "path";
 import { fileURLToPath } from "url";
@@ -34,6 +37,9 @@ app.get("/api/", (req, res) => {
 });
 
 app.use("/api/eventos", eventosRouter);
+app.use("/api/foros", forosRouter); 
+app.use("/api/threads", threadsRouter); 
+app.use("/api/posts", postsRouter);
 
 // app.get("*", (req, res) => {
 //   res.sendFile(path.join(staticAppPath, "index.html"));
