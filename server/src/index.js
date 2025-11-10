@@ -6,6 +6,8 @@ import eventosRouter from "./routes/eventos.js";
 import forosRouter from "./routes/foro.js";
 import threadsRouter from "./routes/threads.js";
 import postsRouter from "./routes/posts.js";
+import userRouter from "./routes/usuarios.js";
+import tutoriaRouter from "./routes/tutorias.js";
 
 import path from "path";
 import { fileURLToPath } from "url";
@@ -40,6 +42,8 @@ app.use("/api/eventos", eventosRouter);
 app.use("/api/foros", forosRouter); 
 app.use("/api/threads", threadsRouter); 
 app.use("/api/posts", postsRouter);
+app.use("/api/usuarios", userRouter);
+app.use("/api/tutorias", tutoriaRouter);
 
 // app.get("*", (req, res) => {
 //   res.sendFile(path.join(staticAppPath, "index.html"));
