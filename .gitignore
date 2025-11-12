@@ -1,6 +1,9 @@
 # Node.js
 server/node_modules/
 
+# Environment files
+# server/.env
+
 # Coverage
 coverage/
 

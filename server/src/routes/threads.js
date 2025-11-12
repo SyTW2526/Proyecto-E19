@@ -72,10 +72,13 @@ router.put("/:id", async (req, res) => {
 // Borrar
 router.delete("/:id", async (req, res) => {
 	try {
-		const t = await Thread.findByIdAndDelete(req.params.id);
+		const t = await Thread.findById(req.params.id);
 		if (!t) return res.status(404).json({ error: "not_found" });
-		// opcional: borrar posts asociados u otra limpieza
-		await Post.updateMany({ thread: t._id }, { $set: { status: "deleted" } }).catch(() => {});
+
+		// borrar posts asociados y luego el thread
+		await Post.deleteMany({ thread: t._id });
+		await Thread.findByIdAndDelete(t._id);
+
 		res.json({ ok: true });
 	} catch (err) {
 		res.status(500).json({ error: err.message });
