@@ -21,8 +21,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const staticAppPath = path.join(__dirname, "..", "..", "app");
-app.use(express.static(staticAppPath));
+app.use(express.static("/app_static"));
 
 // Conexión a MongoDB
 mongoose.connect(process.env.MONGO_URI)
