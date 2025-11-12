@@ -2,7 +2,7 @@
 server/node_modules/
 
 # Environment files
-server/.env
+# server/.env
 
 # Coverage
 coverage/
