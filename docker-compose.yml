@@ -1,0 +1,10 @@
+services:
+  app:
+    build:
+      context: ./server       # Carpeta donde está tu Dockerfile
+      dockerfile: Dockerfile  # Nombre del Dockerfile (opcional si se llama Dockerfile)
+    ports:
+      - "4000:4000"           # Puerto host:puerto contenedor
+    volumes:
+      - ./server:/app         # Permite hot-reload con nodemon
+    command: npm run dev       # Script que quieres ejecutar
