@@ -7,4 +7,5 @@ services:
       - "4000:4000"           # Puerto host:puerto contenedor
     volumes:
       - ./server:/app         # Permite hot-reload con nodemon
+      - ./app:/app_static
     command: npm run dev       # Script que quieres ejecutar
