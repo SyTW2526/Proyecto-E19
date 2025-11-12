@@ -1,6 +1,6 @@
 # Proyecto-E19
 
-Proyecto-E19 es un repositorio ligero y modular pensado para desarrollar y compartir funciones/servicios relacionados con [añadir breve descripción del dominio]. Este README sirve como guía rápida para instalar, ejecutar y contribuir.
+Proyecto-E19 es un repositorio que guarda el proceso de una aplicación de tutorías. Separado por servidor y cliente donde usamos mongodb como base de datos y docker para la realización de la imagen
 
 ## Tabla de contenidos
 - [Estado](#estado)
@@ -10,10 +10,12 @@ Proyecto-E19 es un repositorio ligero y modular pensado para desarrollar y compa
 - [Uso](#uso)
 - [Estructura del proyecto](#estructura-del-proyecto)
 - [Contribuir](#contribuir)
-- [Licencia](#licencia)
 
 ## Estado
-En desarrollo (añadir progreso)
+En desarrollo 
+  - Desarrollando frontEnd
+  - Sing Up
+  - ...
 
 ## Características
 - Descripción corta de la funcionalidad principal.
@@ -28,53 +30,40 @@ En desarrollo (añadir progreso)
 ## Instalación
 1. Clona el repositorio:
   ```
-  git clone <URL_DEL_REPOSITORIO>
+  git clone https://github.com/SyTW2526/Proyecto-E19.git
   cd Proyecto-E19
   ```
-2. Instala dependencias (ejemplo genérico — adapta al stack):
+2. Instala dependencias:
   - Node:
     ```
     npm install
     ```
-  - Python (venv recomendado):
+  - Docker:
     ```
-    python -m venv .venv
-    source .venv/bin/activate
-    pip install -r requirements.txt
+    sudo snap install docker
     ```
 
 ## Uso
-- Ejecuta la aplicación / scripts (ejemplos genéricos — reemplaza con comandos reales):
+- Ejecuta la aplicación :
   ```
-  npm start
+  cd server
+  sudo docker-compose up --build
   ```
-  o
-  ```
-  python main.py
-  ```
-- Añade ejemplos de entrada y salida esperada, flags importantes y variables de entorno necesarias.
+- Tras realizar esto se conectara automaticamente a la BBDD y al backend desplegando
+- En el navegador poner http://localhost:4000
 
 ## Estructura del proyecto
 - README.md — documentación principal
 - src/ — código fuente
 - tests/ — pruebas automatizadas
-- docs/ — documentación extendida
-- scripts/ — utilidades y tareas
-(Ajusta la estructura según tu repo real)
+- nginx/ — Contenido nginx
+- app/ — cliente
 
 ## Tests
-- Ejecutar pruebas:
-  ```
-  npm test
-  ```
-  o
-  ```
-  pytest
-  ```
-Incluye instrucciones específicas para pruebas unitarias/integración.
+- De momento no hay
+
 
 ## Contribuir
-1. Fork del repositorio.
-2. Crea una rama feature/bugfix: `git checkout -b feature/nombre`
-3. Haz commits pequeños y claros.
-4. Abre un pull request con descripción y tests cuando proceda.
+1. Crea una rama feature/: `git checkout -b feature/nombre`
+2. Haz commits pequeños y claros.
+3. Abre un pull request con descripción y tests cuando proceda.
