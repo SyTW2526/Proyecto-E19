@@ -1,11 +1,43 @@
 services:
   app:
     build:
-      context: ./server       # Carpeta donde está tu Dockerfile
-      dockerfile: Dockerfile  # Nombre del Dockerfile (opcional si se llama Dockerfile)
+      context: ./server
+      dockerfile: Dockerfile
     ports:
-      - "4000:4000"           # Puerto host:puerto contenedor
+      - "4000:4000"
     volumes:
-      - ./server:/app         # Permite hot-reload con nodemon
-      - ./app:/app_static
-    command: npm run dev       # Script que quieres ejecutar
+      - ./server:/app:delegated
+      - /src/node_modules
+    command: npm run dev
+
+  frontend:
+    # Use a lightweight Node image for development with Vite running inside the container.
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./app:/app:delegated
+      - /app/node_modules
+    ports:
+      - "5173:5173"    # Exponer Vite dev server al host
+    environment:
+      - BACKEND_URL=http://app:4000
+      - IN_DOCKER=1
+      # Opcionales para HMR si hay problemas: ajusta según plataforma
+      - HMR_HOST=localhost
+      - HMR_PORT=5173
+    depends_on:
+      - app
+    command: sh -c "npm install --silent && npm run dev"
+    restart: unless-stopped
+
+  # Optional: a production frontend service that builds and serves static files with nginx.
+  # Keep it separate from the dev frontend above.
+  frontend-prod:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - app
+    restart: unless-stopped

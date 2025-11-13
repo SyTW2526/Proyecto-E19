@@ -63,6 +63,14 @@ En desarrollo
 - De momento no hay
 
 
+## Uso con docker
+
+Para desarrollo ejecutar: 
+```
+docker compose build app frontend 
+docker compose up app frontend
+```
+
 ## Contribuir
 1. Crea una rama feature/: `git checkout -b feature/nombre`
 2. Haz commits pequeños y claros.

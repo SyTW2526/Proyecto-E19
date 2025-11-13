@@ -3,29 +3,6 @@ import User from "../models/User.js";
 
 const router = express.Router();
 
-// Crear usuario
-router.post("/", async (req, res) => {
-  try {
-    const data = req.body;
-
-    // validación básica
-    if (!data.email || !data.password || !data.name) {
-      return res.status(400).json({ error: "Faltan campos obligatorios (name, email, password)" });
-    }
-
-    const existe = await User.findOne({ email: data.email });
-    if (existe) {
-      return res.status(409).json({ error: "El email ya está registrado" });
-    }
-
-    const user = new User({ ...data });
-    await user.save();
-    res.status(201).json(user);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "server_error", details: err.message });
-  }
-});
 
 // Obtener usuario por ID
 router.get("/:id", async (req, res) => {
