@@ -1,14 +1,16 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// Proxy /api to backend service (Docker compose service name 'app') during dev
+const backend = process.env.BACKEND_URL || 'http://app:4000'
+
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: '0.0.0.0',
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://host.docker.internal:4000',
+        target: backend,
         changeOrigin: true,
         secure: false,
       },
