@@ -16,9 +16,9 @@ const Navbar = ({user, setUser}) => {
   
   return (
     <nav className="bg-gray-800 p-4 text-white justify-between felx items-center "> 
-      <Link to="/">
+      {/* <Link to="/">
         Autenticación
-      </Link>
+      </Link> */}
       <div>
         {user ? (
           <button  
