@@ -55,9 +55,8 @@ function App() {
 
   return (
     <Router>
-      <Navbar user={user} setUser={setUser}/>
         <Routes> 
-          <Route path="/" element={<Home setUser={setUser} />} />
+          <Route path="/" element={<><Navbar user={user} setUser={setUser}/><Home setUser={setUser} /></>} />
           <Route path="/login" element={<Login setUser={setUser} />} />
           <Route path="/register" element={<Register setUser={setUser}/>} />
         </Routes>

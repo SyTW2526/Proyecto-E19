@@ -1,48 +1,109 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import loginImage from '../images/etsi_informatica.png';
+import loginImage from '../images/fondo.png';
 
 const Login = ({ setUser }) => {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({ email: "", password: "" });
   const navigate = useNavigate();
+
+  const validateForm = () => {
+    const errors = { email: "", password: "" };
+    let isValid = true;
+
+    if (!form.email.trim()) {
+      errors.email = "El correo es obligatorio";
+      isValid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      errors.email = "El correo no es válido";
+      isValid = false;
+    }
+
+    if (!form.password) {
+      errors.password = "La contraseña es obligatoria";
+      isValid = false;
+    } else if (form.password.length < 6) {
+      errors.password = "La contraseña debe tener al menos 6 caracteres";
+      isValid = false;
+    }
+
+    setFieldErrors(errors);
+    return isValid;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setFieldErrors({ email: "", password: "" });
+    
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await axios.post("http://localhost:4000/api/auth/login", form);
       setUser(res.data);
       navigate("/");
     } catch (err) {
-      setError(err.response?.data?.message || "Ha ocurrido un error");
+      setError(err.response?.data?.message || "Credenciales incorrectas. Por favor, intenta de nuevo.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-6xl bg-white rounded-3xl shadow-2xl overflow-hidden">
-        <div className="flex flex-col lg:flex-row">
+    <div className="min-h-screen flex relative">
+      {/* Imagen de fondo que cubre toda la pantalla */}
+      <div className="absolute inset-0 w-full h-full">
+        <img 
+          src={loginImage} 
+          alt="ETSI Informática ULL" 
+          className="w-full h-full object-cover"
+        />
+      </div>
+      
+      <div className="w-full flex flex-col lg:flex-row relative z-10">
           
           {/* Formulario - Lado Izquierdo */}
-          <div className="w-full lg:w-1/2 p-8 lg:p-12">
+          <div className="w-full lg:w-2/5 p-8 lg:p-12 bg-white/95 backdrop-blur-sm lg:rounded-r-3xl shadow-2xl">
             <div className="mb-8">
-              <h1 className="text-5xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
-                ULL CALENDAR
+              <h1 className="text-3xl font-extrabold text-black-900 bg-clip-text mb-3">
+                Iniciar Sesión
               </h1>
-              <p className="text-gray-600 text-lg">Bienvenido de nuevo</p>
+              <p className="text-gray-400 text-lg">Iniciar sesión con credencial ULL</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6 relative">
+              
+              {/* Error Message - Fixed position toast */}
+              {error && (
+                <div className="absolute -top-20 left-0 right-0 z-50 animate-slideDown">
+                  <div className="bg-red-500 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3">
+                    <svg className="h-5 w-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm font-medium flex-1">{error}</span>
+                    <button
+                      type="button"
+                      onClick={() => setError("")}
+                      className="flex-shrink-0 text-white/80 hover:text-white transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )}
+              
               {/* Email Input */}
               <div>
                 <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
-                  Correo electrónico
+                  Usuario
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -54,12 +115,26 @@ const Login = ({ setUser }) => {
                     id="email"
                     type="email"
                     placeholder="tu@email.ull.es"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-gray-900"
+                    className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 transition-all outline-none text-gray-900 ${
+                      fieldErrors.email 
+                        ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                        : 'border-gray-300 focus:ring-[#5C068C] focus:border-[#5C068C]'
+                    }`}
                     value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    required
+                    onChange={(e) => {
+                      setForm({ ...form, email: e.target.value });
+                      if (fieldErrors.email) setFieldErrors({ ...fieldErrors, email: "" });
+                    }}
                   />
                 </div>
+                {fieldErrors.email && (
+                  <p className="mt-1.5 text-sm text-red-600 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    {fieldErrors.email}
+                  </p>
+                )}
               </div>
 
               {/* Password Input */}
@@ -77,31 +152,33 @@ const Login = ({ setUser }) => {
                     id="password"
                     type="password"
                     placeholder="••••••••"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-gray-900"
+                    className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 transition-all outline-none text-gray-900 ${
+                      fieldErrors.password 
+                        ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                        : 'border-gray-300 focus:ring-[#5C068C] focus:border-[#5C068C]'
+                    }`}
                     value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    required
+                    onChange={(e) => {
+                      setForm({ ...form, password: e.target.value });
+                      if (fieldErrors.password) setFieldErrors({ ...fieldErrors, password: "" });
+                    }}
                   />
                 </div>
-              </div>
-
-              {/* Error Message */}
-              {error && (
-                <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
-                  <div className="flex items-center">
-                    <svg className="h-5 w-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                {fieldErrors.password && (
+                  <p className="mt-1.5 text-sm text-red-600 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                     </svg>
-                    <p className="text-sm text-red-700 font-medium">{error}</p>
-                  </div>
-                </div>
-              )}
+                    {fieldErrors.password}
+                  </p>
+                )}
+              </div>
 
               {/* Submit Button */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3.5 px-4 rounded-xl font-bold text-lg hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transform transition-all duration-200 hover:scale-[1.02] hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg"
+                className="w-full bg-[#5C068C] text-white py-3.5 px-4 rounded-xl font-bold text-lg hover:bg-[#4A0570] focus:outline-none focus:ring-4 focus:ring-[#5C068C]/30 transform transition-all duration-200 hover:scale-[1.02] hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg"
               >
                 {loading ? (
                   <span className="flex items-center justify-center">
@@ -118,21 +195,18 @@ const Login = ({ setUser }) => {
 
               {/* Links */}
               <div className="flex items-center justify-between text-sm mt-6">
-                <a href="#" className="text-blue-600 hover:text-blue-800 font-medium hover:underline">
+                <a href="#" className="text-[#5C068C] hover:text-[#4A0570] font-medium hover:underline">
                   ¿Olvidaste tu contraseña?
                 </a>
-                <a href="/register" className="text-blue-600 hover:text-blue-800 font-medium hover:underline">
+                <a href="/register" className="text-[#5C068C] hover:text-[#4A0570] font-medium hover:underline">
                   Crear cuenta
                 </a>
               </div>
 
               {/* Divider */}
               <div className="relative my-8">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300"></div>
-                </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-white text-gray-500 font-medium">o continúa con</span>
+                  <span className="bg-transparent text-gray-500 font-medium">o continúa con</span>
                 </div>
               </div>
 
@@ -151,43 +225,7 @@ const Login = ({ setUser }) => {
               </button>
             </form>
           </div>
-
-          {/* Imagen - Lado Derecho */}
-          <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 p-12 items-center justify-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-black opacity-5"></div>
-            <div className="relative z-10 text-center space-y-8">
-              <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-3 transform hover:scale-105 transition-transform duration-300">
-                <img 
-                  src={loginImage} 
-                  alt="ETSI Informática ULL" 
-                  className="w-full max-w-lg mx-auto rounded-2xl shadow-2xl"
-                />
-              </div>
-              <div className="space-y-4">
-                <h2 className="text-4xl font-bold text-white leading-tight">
-                  Gestiona tu tiempo académico
-                </h2>
-                <p className="text-blue-100 text-xl leading-relaxed">
-                  Accede a tutorías, eventos y recursos <br />de la Universidad de La Laguna
-                </p>
-                <div className="flex items-center justify-center gap-4 pt-4">
-                  <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
-                    <svg className="w-5 h-5 text-green-300" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
-                    </svg>
-                    <span className="text-white text-sm font-medium">Seguro y confiable</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Decorative Elements */}
-            <div className="absolute top-10 right-10 w-32 h-32 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
-            <div className="absolute bottom-10 left-10 w-40 h-40 bg-white/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
-            <div className="absolute top-1/2 right-20 w-24 h-24 bg-white/5 rounded-full blur-2xl"></div>
-          </div>
         </div>
-      </div>
     </div>
   );
 };
