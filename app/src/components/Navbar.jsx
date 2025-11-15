@@ -15,23 +15,27 @@ const Navbar = ({user, setUser}) => {
   
   
   return (
-    <nav className="bg-gray-800 p-4 text-white justify-between felx items-center "> 
-      {/* <Link to="/">
-        Autenticación
-      </Link> */}
-      <div>
+    <nav className="bg-gray-800 p-4 text-white flex items-center justify-between"> 
+      <div className="flex items-center nav-brand">
+        <Link to="/" className="brand-link">
+          <span className="nav-logo">U</span>
+          <span className="nav-title">ULL CALENDAR</span>
+        </Link>
+      </div>
+
+      <div className="flex items-center space-x-3">
         {user ? (
-          <button  
+          <button
             onClick={handleLogout}
-            className= "bg-red-500 px-3 py-1 rounded">
+            className="bg-red-500 px-3 py-1 rounded">
             Cerrar sesión
           </button>
         ) : (
           <>
-            <Link to="/login">
+            <Link to="/login" className="px-3 py-1 hover:underline">
               Iniciar sesión
             </Link>
-            <Link to="/register">
+            <Link to="/register" className="px-3 py-1 hover:underline">
               Registrarse
             </Link>
           </>
