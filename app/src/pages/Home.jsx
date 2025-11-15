@@ -1,7 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import heroImage from '../images/etsi_informatica.png';
 
 function Home({ setUser }) {
   const navigate = useNavigate();

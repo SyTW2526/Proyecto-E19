@@ -1,7 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import registerImage from '../images/fondo.png';
 
 const Register = ({ setUser }) => {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
@@ -9,6 +8,16 @@ const Register = ({ setUser }) => {
   const [loading, setLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({ name: "", email: "", password: "" });
   const navigate = useNavigate();
+
+    // Cargar todas las imágenes automáticamente
+    const images = import.meta.glob('../images/*.{png,jpg,jpeg}', { eager: true, import: 'default' });
+    const [registerImage, setRegisterImage] = useState('');
+  
+    useEffect(() => {
+      const imageArray = Object.values(images);
+      const randomIndex = Math.floor(Math.random() * imageArray.length);
+      setRegisterImage(imageArray[randomIndex]); // ✅ Esto sí actualizará la UI
+    }, []);
 
   const validateForm = () => {
     let isValid = true;

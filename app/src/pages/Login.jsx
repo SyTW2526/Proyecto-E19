@@ -1,7 +1,6 @@
 import React, { useState, useEffect  } from 'react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
-import loginImage from '../images/fondo.png';
 
 const Login = ({ setUser }) => {
     const navigate = useNavigate();
@@ -23,6 +22,16 @@ const Login = ({ setUser }) => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({ email: "", password: "" });
+
+  // Cargar todas las imágenes automáticamente
+  const images = import.meta.glob('../images/*.{png,jpg,jpeg}', { eager: true, import: 'default' });
+  const [loginImage, setLoginImage] = useState('');
+
+  useEffect(() => {
+    const imageArray = Object.values(images);
+    const randomIndex = Math.floor(Math.random() * imageArray.length);
+    setLoginImage(imageArray[randomIndex]); // ✅ Esto sí actualizará la UI
+  }, []);
 
   const validateForm = () => {
     const errors = { email: "", password: "" };
