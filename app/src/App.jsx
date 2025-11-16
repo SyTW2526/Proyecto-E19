@@ -4,6 +4,7 @@ import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Dashboard from './pages/Dashboard';
 import axios from 'axios';
 
 axios.defaults.withCredentials = true;
@@ -58,6 +59,7 @@ function App() {
         <Route path="/" element={<><Navbar user={user} setUser={setUser} /><Home setUser={setUser} /></>} />
         <Route path="/login" element={<Login setUser={setUser} />} />
         <Route path="/register" element={<Register setUser={setUser} />} />
+        <Route path="/dashboard" element={<><Navbar user={user} setUser={setUser} /><Dashboard user={user} /></>} />
       </Routes>
     </Router>
   );

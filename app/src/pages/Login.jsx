@@ -64,7 +64,7 @@ const Login = ({ setUser }) => {
     try {
       const res = await axios.post("http://localhost:4000/api/auth/login", form);
       setUser(res.data);
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       setError(err.response?.data?.message || "Credenciales incorrectas. Por favor, intenta de nuevo.");
     } finally {
