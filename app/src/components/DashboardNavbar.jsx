@@ -34,33 +34,33 @@ const DashboardNavbar = ({ user, setUser }) => {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 bg-white py-4 md:py-5 px-4 pr-8 text-gray-800 flex items-center justify-between border-b border-gray-200 z-50">
+    <nav className="fixed top-0 left-0 right-0 bg-white py-2 sm:py-3 lg:py-4 px-3 sm:px-4 lg:pr-8 text-gray-800 flex items-center justify-between z-50">
       {/* Logo y buscador */}
-      <div className="flex items-center gap-10 lg:gap-17">
-        <div className="flex items-center gap-2 md:gap-3 text-lg md:text-xl font-bold text-gray-800">
-          <span className="w-8 h-8 md:w-10 md:h-10 bg-[#7024BB] rounded-full flex items-center justify-center text-white text-lg md:text-xl font-extrabold">U</span>
+      <div className="flex items-center gap-3 sm:gap-6 lg:gap-10 xl:gap-17">
+        <div className="flex items-center gap-2 text-base sm:text-lg lg:text-xl font-bold text-gray-800">
+          <span className="w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-[#7024BB] rounded-full flex items-center justify-center text-white text-base sm:text-lg lg:text-xl font-extrabold">U</span>
           <span className="hidden sm:inline">ULL CALENDAR</span>
         </div>
         
         {/* Buscador */}
         <div className="hidden md:flex items-center relative">
-          <svg className="absolute left-3 w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="absolute left-3 w-4 h-4 lg:w-5 lg:h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
             type="text"
             placeholder="Buscar tutorías, espacios..."
-            className="pl-10 pr-4 py-2 w-64 lg:w-100 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7024BB] focus:border-transparent transition-all"
+            className="pl-9 lg:pl-10 pr-3 lg:pr-4 py-1.5 lg:py-2 w-48 lg:w-64 xl:w-80 border border-gray-300 rounded-lg text-xs lg:text-sm focus:outline-none focus:ring-2 focus:ring-[#7024BB] focus:border-transparent transition-all"
           />
         </div>
       </div>
 
       {/* Menú de navegación central - pegado a la derecha */}
-      <div className="flex items-center gap-4 xl:gap-8">
-        <div className="hidden lg:flex items-center gap-4 xl:gap-8">
+      <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 xl:gap-8">
+        <div className="hidden lg:flex items-center gap-3 xl:gap-8">
           <button 
             onClick={() => navigateToSection('dashboard')}
-            className={`text-sm xl:text-base font-semibold transition-colors py-2 px-2 ${
+            className={`text-xs lg:text-sm xl:text-base font-semibold transition-colors py-2 px-1.5 lg:px-2 ${
               currentSection === 'dashboard' 
                 ? 'text-[#7024BB] border-b-2 border-[#7024BB]' 
                 : 'text-gray-800 hover:text-[#7024BB]'
@@ -70,7 +70,7 @@ const DashboardNavbar = ({ user, setUser }) => {
           </button>
           <button 
             onClick={() => navigateToSection('tutorias')}
-            className={`text-sm xl:text-base font-semibold transition-colors py-2 px-2 ${
+            className={`text-xs lg:text-sm xl:text-base font-semibold transition-colors py-2 px-1.5 lg:px-2 ${
               currentSection === 'tutorias' 
                 ? 'text-[#7024BB] border-b-2 border-[#7024BB]' 
                 : 'text-gray-800 hover:text-[#7024BB]'
@@ -80,7 +80,7 @@ const DashboardNavbar = ({ user, setUser }) => {
           </button>
           <button 
             onClick={() => navigateToSection('espacios')}
-            className={`text-sm xl:text-base font-semibold transition-colors py-2 px-2 ${
+            className={`text-xs lg:text-sm xl:text-base font-semibold transition-colors py-2 px-1.5 lg:px-2 ${
               currentSection === 'espacios' 
                 ? 'text-[#7024BB] border-b-2 border-[#7024BB]' 
                 : 'text-gray-800 hover:text-[#7024BB]'
@@ -90,7 +90,7 @@ const DashboardNavbar = ({ user, setUser }) => {
           </button>
           <button 
             onClick={() => navigateToSection('calendario')}
-            className={`text-sm xl:text-base font-semibold transition-colors py-2 px-2 ${
+            className={`text-xs lg:text-sm xl:text-base font-semibold transition-colors py-2 px-1.5 lg:px-2 ${
               currentSection === 'calendario' 
                 ? 'text-[#7024BB] border-b-2 border-[#7024BB]' 
                 : 'text-gray-800 hover:text-[#7024BB]'
@@ -104,7 +104,7 @@ const DashboardNavbar = ({ user, setUser }) => {
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="w-9 h-9 md:w-10 md:h-10 bg-gradient-to-br from-[#7024BB] to-[#8e44e5] rounded-full flex items-center justify-center text-white font-bold text-sm hover:from-[#5f1da0] hover:to-[#7024BB] transition-all duration-200"
+            className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 bg-gradient-to-br from-[#7024BB] to-[#8e44e5] rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm hover:from-[#5f1da0] hover:to-[#7024BB] transition-all duration-200"
           >
             {getInitial(user)}
           </button>

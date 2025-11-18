@@ -190,7 +190,7 @@ const Navbar = ({user, setUser}) => {
   
   
   return (
-    <nav className="bg-white py-4 md:py-5 px-8 md:px-20 lg:px-32 text-gray-800 flex items-center justify-between shadow-md"> 
+    <nav className="bg-white py-2 sm:py-3 lg:py-4 px-3 sm:px-4 md:px-8 lg:px-16 xl:px-24 text-gray-800 flex items-center justify-between shadow-md"> 
       <div className="flex items-center nav-brand">
         <Link to="/" className="flex items-center gap-2 md:gap-3 text-lg md:text-xl font-bold text-gray-800 hover:text-[#7024BB] transition-colors">
           <span className="w-8 h-8 md:w-10 md:h-10 bg-[#7024BB] rounded-full flex items-center justify-center text-white text-lg md:text-xl font-extrabold">U</span>

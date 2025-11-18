@@ -44,6 +44,7 @@ function Icon({ name, className = 'w-5 h-5' }) {
 function Dashboard({ user }) {
   const navigate = useNavigate();
   const { currentSection, activeSubsection, navigateToSubsection, getCurrentMenu, getQuickAccess } = useNavigation();
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
   const menu = getCurrentMenu();
   const quickAccess = getQuickAccess();
@@ -64,12 +65,22 @@ function Dashboard({ user }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Sidebar fija a la izquierda */}
-      <aside className="fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-gray-200 overflow-y-auto pt-20">
-        <div className="p-4">
+    <div className="min-h-screen bg-white">
+      {/* Overlay para cerrar sidebar en móvil */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar fija a la izquierda - responsive */}
+      <aside className={`fixed left-0 top-0 bottom-0 w-64 bg-white overflow-y-auto pt-16 z-30 transition-transform duration-300 lg:translate-x-0 ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
+        <div className="p-3">
           {/* Título del menú */}
-          <div className="px-4 mb-2">
+          <div className="px-3 mb-2">
             <p className="text-xs font-semibold text-gray-400 tracking-wider">
               {sectionTitles[currentSection].toUpperCase()}
             </p>
@@ -80,8 +91,11 @@ function Dashboard({ user }) {
             {menu.map((item) => (
               <button
                 key={item.id}
-                onClick={() => navigateToSubsection(item.id)}
-                className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg transition-colors text-sm font-medium ${
+                onClick={() => {
+                  navigateToSubsection(item.id);
+                  setSidebarOpen(false);
+                }}
+                className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium ${
                   activeSubsection === item.id
                     ? 'bg-[#7024BB] text-white'
                     : 'text-gray-700 hover:bg-gray-100'
@@ -94,57 +108,71 @@ function Dashboard({ user }) {
           </nav>
 
           {/* Accesos rápidos en la parte inferior */}
-          <div className="absolute bottom-4 left-4 right-4">
-            <div className="pt-4 border-t border-gray-200">
-              <p className="text-xs font-semibold text-gray-400 tracking-wider mb-3 px-4">ACCESOS RÁPIDOS</p>
-              {quickAccess.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    if (item.section !== currentSection) {
-                      navigateToSubsection(item.id);
-                    }
-                  }}
-                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors mb-2"
-                >
-                  <Icon name={item.icon} className="w-4 h-4" />
-                  <span>{item.label}</span>
-                </button>
-              ))}
-            </div>
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <p className="text-xs font-semibold text-gray-400 tracking-wider mb-3 px-3">ACCESOS RÁPIDOS</p>
+            {quickAccess.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  if (item.section !== currentSection) {
+                    navigateToSubsection(item.id);
+                  }
+                  setSidebarOpen(false);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors mb-2"
+              >
+                <Icon name={item.icon} className="w-4 h-4" />
+                <span>{item.label}</span>
+              </button>
+            ))}
           </div>
         </div>
       </aside>
 
-      {/* Contenido principal - con margen izquierdo para la sidebar */}
-      <main className="ml-64 pt-20 min-h-screen">
-        <div className="p-8">
-          {/* Aquí va el contenido según la sección activa */}
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {menu.find(m => m.id === activeSubsection)?.label || sectionTitles[currentSection]}
-            </h1>
-            <p className="text-gray-600">
-              {sectionDescriptions[currentSection]}
-            </p>
-          </div>
+      {/* Botón hamburguesa para móvil */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="fixed top-20 left-4 z-40 lg:hidden bg-white p-2 rounded-lg shadow-lg"
+      >
+        <svg className="w-6 h-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
 
-          {/* Contenido placeholder */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-            <div className="flex flex-col items-center justify-center min-h-[500px]">
-              <div className="text-center">
-                <div className="mb-4">
-                  <Icon name={menu.find(m => m.id === activeSubsection)?.icon || 'book'} className="w-16 h-16 mx-auto text-gray-400" />
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  {menu.find(m => m.id === activeSubsection)?.label || 'Sección en desarrollo'}
-                </h2>
-                <p className="text-gray-600 max-w-md">
-                  Esta funcionalidad estará disponible próximamente. Estamos trabajando para ofrecerte la mejor experiencia.
-                </p>
-                <div className="mt-6 text-xs text-gray-400">
-                  <p>Sección: <span className="font-semibold">{currentSection}</span></p>
-                  <p>Subsección: <span className="font-semibold">{activeSubsection}</span></p>
+      {/* Contenido principal - responsive */}
+      <main className="lg:ml-64 fixed inset-0 pt-16 lg:pt-20 flex flex-col">
+        <div className="flex-1 pl-3 sm:pl-4 lg:pl-6 overflow-hidden">
+          <div className="h-full bg-gray-100 rounded-tl-3xl flex flex-col overflow-hidden">
+            {/* Título fijo */}
+            <div className="p-4 sm:p-6 lg:p-8 pb-3 lg:pb-4">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-1 lg:mb-2">
+                {menu.find(m => m.id === activeSubsection)?.label || sectionTitles[currentSection]}
+              </h1>
+              <p className="text-sm sm:text-base text-gray-600">
+                {sectionDescriptions[currentSection]}
+              </p>
+            </div>
+
+            {/* Contenido con scroll interno */}
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8">
+              {/* Contenido placeholder */}
+              <div className="bg-white rounded-lg p-4 sm:p-6 lg:p-8 shadow-sm">
+                <div className="flex flex-col items-center justify-center min-h-[300px] sm:min-h-[400px] lg:min-h-[500px]">
+                  <div className="text-center">
+                    <div className="mb-4">
+                      <Icon name={menu.find(m => m.id === activeSubsection)?.icon || 'book'} className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 mx-auto text-gray-400" />
+                    </div>
+                    <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-2">
+                      {menu.find(m => m.id === activeSubsection)?.label || 'Sección en desarrollo'}
+                    </h2>
+                    <p className="text-sm sm:text-base text-gray-600 max-w-md px-4">
+                      Esta funcionalidad estará disponible próximamente. Estamos trabajando para ofrecerte la mejor experiencia.
+                    </p>
+                    <div className="mt-6 text-xs text-gray-400">
+                      <p>Sección: <span className="font-semibold">{currentSection}</span></p>
+                      <p>Subsección: <span className="font-semibold">{activeSubsection}</span></p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
