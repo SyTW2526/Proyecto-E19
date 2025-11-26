@@ -1,53 +1,255 @@
-import React from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Icon from '../components/Icon';
 
 function TutoriasProfesor({ menu, activeSubsection }) {
   const item = (menu || []).find((m) => m.id === activeSubsection) || {};
   const tab = item.id || activeSubsection || 'default';
   console.log (menu);
-  // contenidos de ejemplo por pestaña (ajusta las claves a los ids reales del menú)
+  // contenidos de ejemplo por pestaña (se actualiza historial con 5 datetimes)
   const contenidos = {
-    reservar: [
-      { id: 1, alumno: 'María Pérez', hora: '10:00' },
-      { id: 2, alumno: 'Juan García', hora: '11:30' },
-    ],
+    'profesores': [
+      { id: 1, alumno: 'María Pérez', hora: '10:00', estado: 'Pendiente' },
+      { id: 2, alumno: 'Juan García', hora: '11:30', estado: 'Confirmada' },
+    ],  
     'mis-tutorias': [
-      { id: 1, alumno: 'Ana López', motivo: 'Consulta TFG', fecha: '2025-11-27' },
-      { id: 2, alumno: 'Luis Ruiz', motivo: 'Revisión parcial', fecha: '2025-11-28' },
+      { id: 1, alumno: 'Ana López', asunto: 'Consulta TFG', fecha: '2025-11-27' },
+      { id: 2, alumno: 'Luis Ruiz', asunto: 'Revisión parcial', fecha: '2025-11-28' },
     ],
+    // placeholder: historial será sustituido por dbHistorial si está disponible
     historial: [
-      { id: 1, alumno: 'María Pérez', resultado: 'Realizada', fecha: '2025-10-15' },
-      { id: 2, alumno: 'Juan García', resultado: 'Cancelada', fecha: '2025-10-20' },
+      { id: 1, alumno: 'María Pérez', datetime: '2025-11-10T09:30:00' },
+      { id: 2, alumno: 'Juan García', datetime: '2025-11-11T14:00:00' },
+      { id: 3, alumno: 'Ana López', datetime: '2025-11-12T11:00:00' },
+      { id: 4, alumno: 'Luis Ruiz', datetime: '2025-11-13T16:30:00' },
+      { id: 5, alumno: 'Carla Martín', datetime: '2025-11-14T08:00:00' },
     ],
-    profesores: null, // mostrará la vista de configuración
+    reservar: [
+      { id: 1, alumno: 'Carla Martín', motivo: 'Duda examen', fecha: '2025-11-29' },
+      { id: 2, alumno: 'Pedro Soto', motivo: 'Proyecto', fecha: '2025-12-01' },
+    ],
   };
 
   const sesiones = contenidos[tab];
 
+  // --- Nuevo: estado y helpers para calendario semanal ---
+  const startOfWeek = (date) => {
+    const d = new Date(date);
+    const day = (d.getDay() + 6) % 7; // convierte domingo(0) -> 6, lunes -> 0
+    d.setDate(d.getDate() - day);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
+
+  // reemplazamos la generación de daysOfWeek para 5 días (lunes-viernes)
+  const daysOfWeek = useMemo(() => {
+    return Array.from({ length: 5 }).map((_, i) => {
+      const d = new Date(weekStart);
+      d.setDate(weekStart.getDate() + i);
+      return d;
+    });
+  }, [weekStart]);
+
+  // estado para datos traídos desde la base de datos (historial)
+  const [dbHistorial, setDbHistorial] = useState(null);
+  const [historialError, setHistorialError] = useState(null);
+  // estado para modal de detalles de sesión
+  const [selectedSession, setSelectedSession] = useState(null);
+  // emails resueltos para mostrar en el modal
+  const [profEmail, setProfEmail] = useState(null);
+  const [studentEmail, setStudentEmail] = useState(null);
+  
+  // helper para calcular fin de semana (end)
+  const endOfWeek = (start) => {
+    const d = new Date(start);
+    d.setDate(d.getDate() + 6);
+    d.setHours(23, 59, 59, 999);
+    return d;
+  };
+
+  // fetch del historial desde la API cuando la pestaña sea 'historial' o cambie la semana
+  useEffect(() => {
+    if (tab !== 'historial') return;
+    let aborted = false;
+    const controller = new AbortController();
+
+    const fetchHistorial = async () => {
+      try {
+        setHistorialError(null);
+        // enviar rango para optimizar consulta en backend
+        const startISO = weekStart.toISOString();
+        const endISO = endOfWeek(weekStart).toISOString();
+        const res = await fetch(`/api/tutorias?type=historial&start=${encodeURIComponent(startISO)}&end=${encodeURIComponent(endISO)}`, {
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (aborted) return;
+        // esperar que data sea array de { id, alumno, datetime, ... }
+        setDbHistorial(Array.isArray(data) ? data : []);
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        console.error('Error cargando historial:', err);
+        setHistorialError(err.message || 'Error');
+        setDbHistorial([]); // fallback vacío
+      }
+    };
+
+    fetchHistorial();
+    return () => {
+      aborted = true;
+      controller.abort();
+    };
+  }, [tab, weekStart /* weekStart viene de estado definido más arriba */]);
+
+  // usar datos de la DB si los tenemos, sino los ejemplos constantes
+  const effectiveHistorial = dbHistorial !== null ? dbHistorial : contenidos.historial;
+
+  const parsedHistorial = useMemo(() => {
+    const list = effectiveHistorial || [];
+    return list
+      .map((s) => {
+        // soportar formato de la BD: fechaInicio / fechaFin (ISO)
+        const start = s.fechaInicio ? new Date(s.fechaInicio) : s.datetime ? new Date(s.datetime) : null;
+        const end = s.fechaFin ? new Date(s.fechaFin) : null;
+        // título y persona (intenta usar campos descriptivos si vienen poblados)
+        const titulo = s.tema || s.title || s.descripcion || s.alumno || (s.estudiante && String(s.estudiante));
+        const lugar = s.lugar || s.location || '';
+        return {
+          ...s,
+          startDate: start,
+          endDate: end,
+          date: start || new Date(),
+          title: titulo,
+          place: lugar,
+        };
+      })
+      // filtrar entradas sin fecha de inicio válida
+      .filter((s) => s.startDate);
+  }, [effectiveHistorial]);
+
+  const sessionsByDay = useMemo(() => {
+    const map = {};
+    daysOfWeek.forEach((d) => {
+      const key = d.toDateString();
+      map[key] = [];
+    });
+    parsedHistorial.forEach((s) => {
+      const key = s.date.toDateString();
+      if (map[key]) map[key].push(s);
+    });
+    // ordenar por hora dentro de cada día
+    Object.keys(map).forEach((k) => {
+      map[k].sort((a, b) => a.date - b.date);
+    });
+    return map;
+  }, [daysOfWeek, parsedHistorial]);
+
+  const prevWeek = () => {
+    const d = new Date(weekStart);
+    d.setDate(d.getDate() - 7);
+    setWeekStart(startOfWeek(d));
+  };
+  const nextWeek = () => {
+    const d = new Date(weekStart);
+    d.setDate(d.getDate() + 7);
+    setWeekStart(startOfWeek(d));
+  };
+
+  const openSession = (s) => setSelectedSession(s);
+  const closeSession = () => setSelectedSession(null);
+
+  // helper para mostrar nombre/usuario/email si el campo viene poblado como objeto
+  const personLabel = (p) => {
+    if (!p) return '';
+    if (typeof p === 'string') return p;
+    // p puede ser un objeto con distintos campos según el back
+    return p.username || p.email || p.name || p.fullName || p.displayName || String(p._id || '') ;
+  };
+ 
+  // Cuando se abre una sesión, resolver emails para profesor y estudiante desde la API
+  useEffect(() => {
+    if (!selectedSession) {
+      setProfEmail(null);
+      setStudentEmail(null);
+      return;
+    }
+    let aborted = false;
+    const controller = new AbortController();
+
+    const fetchEmail = async (idOrObj) => {
+      if (!idOrObj) return null;
+      const id = typeof idOrObj === 'string' ? idOrObj : (idOrObj._id || idOrObj.id || null);
+      if (!id) return null;
+      try {
+        const res = await fetch(`/api/users/${encodeURIComponent(id)}`, { signal: controller.signal });
+        if (!res.ok) return null;
+        const data = await res.json();
+        return data.email || data.username || data.name || null;
+      } catch (err) {
+        if (err.name === 'AbortError') return null;
+        return null;
+      }
+    };
+
+    (async () => {
+      const prof = await fetchEmail(selectedSession.profesor);
+      const stud = await fetchEmail(selectedSession.estudiante);
+      if (aborted) return;
+      setProfEmail(prof || personLabel(selectedSession.profesor));
+      setStudentEmail(stud || personLabel(selectedSession.estudiante));
+    })();
+
+    return () => {
+      aborted = true;
+      controller.abort();
+    };
+  }, [selectedSession]);
+  
+  // --- Nuevas constantes para layout del calendario ---
+  const dayStartHour = 8;
+  const dayEndHour = 18;
+  const hourHeight = 56; // px por hora
+  const totalHours = dayEndHour - dayStartHour;
+  const headerHeight = 40; // altura del título del día (estático)
+  const timelineHeight = totalHours * hourHeight; // altura del área scrollable
+
   return (
     <div className="bg-white rounded-lg p-4 sm:p-6 lg:p-8 shadow-sm">
       <div className="min-h-[300px]">
-        <div className="flex items-center gap-4 mb-4">
-          <Icon name={item.icon || 'user-tie'} className="w-10 h-10 text-green-600" />
-          <h2 className="text-lg font-bold text-gray-900">{item.label || 'Zona Profesor'}</h2>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-4">
+            <Icon name={item.icon || 'user-tie'} className="w-10 h-10 text-violet-600" />
+            <h2 className="text-lg font-bold text-gray-900">{item.label || 'Zona Profesor'}</h2>
+          </div>
+
+          {/* Controles de semana (solo en historial) */}
+          {tab === 'historial' ? (
+            <div className="flex items-center gap-2">
+              <button onClick={prevWeek} className="px-3 py-1 bg-violet-50 text-violet-600 rounded border border-violet-100">«</button>
+              <div className="text-sm text-gray-600">
+                {daysOfWeek && daysOfWeek[0] ? daysOfWeek[0].toLocaleDateString() : ''} - {daysOfWeek && daysOfWeek[Math.min(4, daysOfWeek.length - 1)] ? daysOfWeek[Math.min(4, daysOfWeek.length - 1)].toLocaleDateString() : ''}
+              </div>
+              <button onClick={nextWeek} className="px-3 py-1 bg-violet-50 text-violet-600 rounded border border-violet-100">»</button>
+            </div>
+          ) : null}
         </div>
 
-        {/* Vista para la pestaña "reservar" (o por defecto si coincide) */}
-        {tab === 'reservar' && sesiones && (
+        {/* Gestión de tutorías */}
+        {tab === 'profesores' && sesiones && (
           <>
-            <p className="text-sm text-gray-600 mb-4">
-              Panel de gestión de tutorías: confirma, cancela o reprograma sesiones con tus alumnos.
-            </p>
             <div className="space-y-3">
               {sesiones.map((s) => (
                 <div key={s.id} className="flex items-center justify-between p-3 border rounded">
                   <div>
                     <div className="font-semibold">{s.alumno}</div>
-                    <div className="text-xs text-gray-500">{s.hora}</div>
+                    <div className="text-xs text-gray-500">{s.hora} · {s.estado}</div>
                   </div>
                   <div className="flex gap-2">
                     <button className="px-3 py-1 bg-green-500 text-white rounded">Confirmar</button>
                     <button className="px-3 py-1 bg-red-500 text-white rounded">Cancelar</button>
+                    <button className="px-3 py-1 bg-yellow-400 text-white rounded">Reprogramar</button>
                   </div>
                 </div>
               ))}
@@ -55,12 +257,183 @@ function TutoriasProfesor({ menu, activeSubsection }) {
           </>
         )}
 
-        {/* Vista para la pestaña "solicitudes" */}
+        {/* Mis tutorías */}
         {tab === 'mis-tutorias' && sesiones && (
           <>
-            <p className="text-sm text-gray-600 mb-4">
-              Solicitudes pendientes: revisa y acepta o rechaza las peticiones de tutoría.
-            </p>
+            <div className="space-y-3">
+              {sesiones.map((s) => (
+                <div key={s.id} className="flex items-center justify-between p-3 border rounded">
+                  <div>
+                    <div className="font-semibold">{s.alumno}</div>
+                    <div className="text-xs text-gray-500">{s.asunto} · {s.fecha}</div>
+                  </div>
+                  <div className="text-xs text-gray-600">Ver detalles</div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Historial: calendario semanal con días estáticos y timeline scrollable */}
+        {tab === 'historial' && (
+          <>
+            <div className="mt-4">
+              <div className="border rounded overflow-hidden shadow-sm">
+                {/* HEADER ESTÁTICO: esquina vacía + títulos de los días */}
+                <div className="flex">
+                  {/* esquina izquierda (para alineación con columna de horas) */}
+                  <div className="w-20 border-r border-violet-600 bg-violet-700" style={{ height: headerHeight }} />
+                  {/* títulos de los días (estáticos) */}
+                  <div className="flex-1 grid grid-cols-5">
+                    {daysOfWeek.map((day) => (
+                      <div
+                        key={day.toDateString()}
+                        style={{ height: headerHeight }}
+                        className="flex items-center justify-center text-sm font-semibold text-white bg-violet-700 border-b border-violet-600"
+                      >
+                        <div className="truncate">{day.toLocaleDateString(undefined, { weekday: 'short' }).toUpperCase()} {day.getDate()}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* TIMELINE SCROLLABLE: horas + columnas de días dentro de un contenedor con overflow-y */}
+                <div style={{ height: timelineHeight }} className="flex overflow-y-auto">
+                  {/* columna de horas (se desplaza con el scroll) */}
+                  <div className="w-20 bg-violet-700 border-r border-violet-600">
+                    {Array.from({ length: totalHours }).map((_, idx) => {
+                      const h = dayStartHour + idx;
+                      return (
+                        <div
+                          key={h}
+                          style={{ height: hourHeight }}
+                          className="text-xs text-right flex items-center justify-end pr-3 border-b border-violet-600 text-white"
+                        >
+                          {`${String(h).padStart(2, '0')}:00`}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* columnas de días (5) dentro del área scrollable */}
+                  <div className="flex-1 grid grid-cols-5" style={{ minWidth: 0 }}>
+                    {daysOfWeek.map((day) => {
+                      const key = day.toDateString();
+                      const items = sessionsByDay[key] || [];
+                        return (
+                        <div key={key} className="relative border-l border-violet-600" style={{ height: timelineHeight }}>
+                          {/* líneas por hora (fondo) */}
+                          {Array.from({ length: totalHours }).map((_, i) => (
+                            <div key={i} style={{ height: hourHeight }} className="border-b border-dashed border-violet-600/30"></div>
+                          ))}
+
+                          {/* bloques de sesiones posicionados por hora */}
+                          {items.map((s) => {
+                            const start = s.startDate || s.date;
+                            const end = s.endDate || (s.startDate ? new Date(s.startDate.getTime() + 30 * 60000) : null);
+                            const minutesFromStart = (start.getHours() + start.getMinutes() / 60 - dayStartHour) * hourHeight;
+                            const durationHours = end ? Math.max((end - start) / 3600000, 0.25) : 0.5;
+                            const blockHeight = Math.max(40, durationHours * hourHeight);
+                            const modality = s.modalidad || s.modality || '';
+                            return (
+                              <div
+                                key={s._id || s.id}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => openSession(s)}
+                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openSession(s); }}
+                                className="absolute left-3 right-3 rounded-lg shadow-lg cursor-pointer"
+                                style={{
+                                  top: `${Math.max(0, minutesFromStart)}px`,
+                                  height: `${blockHeight}px`,
+                                  overflow: 'hidden',
+                                }}
+                                title={`${s.title || 'Tutoría'}${modality ? ' — ' + modality : ''}`}
+                              >
+                                <div className="h-full flex">
+                                  <div className="w-1 bg-white/30 rounded-l-md" />
+                                  <div className="flex-1 bg-gradient-to-r from-violet-800 to-violet-600 text-white p-2 rounded-r-lg">
+                                    {/* título */}
+                                    <div className="text-sm font-semibold leading-tight truncate">{s.title || 'Tutoría'}</div>
+                                    {/* modalidad */}
+                                    <div className="text-xs opacity-90 mt-1 truncate">{modality}</div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {/* Modal / panel con información completa */}
+                          {selectedSession && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center">
+                              {/* overlay más claro */}
+                              <div className="absolute inset-0 bg-black/20" onClick={closeSession} />
+                              {/* modal más pequeño y con altura limitada */}
+                              <div className="relative z-10 w-full max-w-lg mx-4 bg-white rounded-lg shadow-xl overflow-auto max-h-[80vh]">
+                                <div className="flex items-start justify-between p-4 border-b">
+                                  <div>
+                                    <h3 className="text-lg font-semibold">{selectedSession.title || selectedSession.tema || 'Tutoría'}</h3>
+                                    <p className="text-sm text-gray-500">{selectedSession.place || selectedSession.lugar || ''}</p>
+                                  </div>
+                                  <button onClick={closeSession} className="text-gray-500 hover:text-gray-700 ml-4">Cerrar ✕</button>
+                                </div>
+                                <div className="p-4 space-y-3">
+                                  <div className="text-sm text-gray-700">
+                                    <strong>Hora:</strong>{' '}
+                                    {(selectedSession.startDate || selectedSession.date) ? (
+                                      <>
+                                        {(new Date(selectedSession.startDate || selectedSession.date)).toLocaleString()} {selectedSession.endDate ? ` - ${(new Date(selectedSession.endDate)).toLocaleString()}` : ''}
+                                      </>
+                                    ) : '—'}
+                                  </div>
+                                  {selectedSession.descripcion && (
+                                    <div>
+                                      <div className="text-xs text-gray-500">Descripción</div>
+                                      <div className="text-sm">{selectedSession.descripcion}</div>
+                                    </div>
+                                  )}
+                                  {selectedSession.tema && (
+                                    <div>
+                                      <div className="text-xs text-gray-500">Tema</div>
+                                      <div className="text-sm">{selectedSession.tema}</div>
+                                    </div>
+                                  )}
+                                  {selectedSession.modalidad && (
+                                    <div className="text-sm"><strong>Modalidad:</strong> {selectedSession.modalidad}</div>
+                                  )}
+                                  {selectedSession.lugar && (
+                                    <div className="text-sm"><strong>Lugar:</strong> {selectedSession.lugar}</div>
+                                  )}
+                                  {selectedSession.estado && (
+                                    <div className="text-sm"><strong>Estado:</strong> {selectedSession.estado}</div>
+                                  )}
+                                  {/* mostrar email resuelto para profesor/estudiante */}
+                                  {selectedSession.profesor && (
+                                    <div className="text-sm"><strong>Profesor:</strong> {selectedSession.profesor}</div>
+                                  )}
+                                  {selectedSession.estudiante && (
+                                    <div className="text-sm"><strong>Estudiante:</strong> {selectedSession.estudiante}</div>
+                                  )}
+                                  <div className="text-right">
+                                    <button onClick={closeSession} className="px-3 py-1 bg-violet-600 text-white rounded">Cerrar</button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-2 text-xs text-violet-500">Vista semanal (L-V): días fijos, desplaza las horas para ver el calendario.</div>
+            </div>
+          </>
+        )}
+
+        {/* Solicitudes de tutoría */}
+        {tab === 'reservar' && sesiones && (
+          <>
             <div className="space-y-3">
               {sesiones.map((s) => (
                 <div key={s.id} className="flex items-center justify-between p-3 border rounded">
@@ -78,47 +451,16 @@ function TutoriasProfesor({ menu, activeSubsection }) {
           </>
         )}
 
-        {/* Vista para la pestaña "historial" */}
-        {tab === 'historial' && sesiones && (
-          <>
-            <p className="text-sm text-gray-600 mb-4">Historial de tutorías realizadas o canceladas.</p>
-            <div className="space-y-3">
-              {sesiones.map((s) => (
-                <div key={s.id} className="p-3 border rounded">
-                  <div className="font-semibold">{s.alumno}</div>
-                  <div className="text-xs text-gray-500">{s.fecha} · {s.resultado}</div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* Vista para la pestaña "config" */}
-        {tab === 'profesores' && (
-          <>
-            <p className="text-sm text-gray-600 mb-4">
-              Ajustes de tutorías: configura horarios, duración y preferencias.
-            </p>
-            <div className="space-y-3">
-              <div className="p-3 border rounded">Opción 1: Horarios disponibles</div>
-              <div className="p-3 border rounded">Opción 2: Duración por defecto</div>
-            </div>
-          </>
-        )}
-
         {/* Fallback si la pestaña no tiene contenido específico */}
         {!Object.prototype.hasOwnProperty.call(contenidos, tab) && (
-          <div>
+          <div className="mt-4">
             <p className="text-sm text-gray-600 mb-4">
               Contenido por defecto para la pestaña seleccionada.
             </p>
-            <div className="p-3 border rounded">Ajusta los ids del menú para enlazar contenido específico (ej.: "agenda", "solicitudes", "historial", "config").</div>
+            <div className="p-3 border rounded">Ajusta los ids del menú a: "gestion-tutorias", "mis-tutorias", "historial", "solicitudes".</div>
           </div>
         )}
 
-        <div className="mt-6 text-xs text-gray-400">
-          <p>Subsección: <span className="font-semibold">{activeSubsection}</span></p>
-        </div>
       </div>
     </div>
   );
