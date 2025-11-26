@@ -15,7 +15,7 @@ function ReservaEspacios({ menu, activeSubsection }) {
             {item.label || 'Reserva de espacios'}
           </h2>
           <p className="text-sm sm:text-base text-gray-600 max-w-md px-4">
-            Parte de Edu Reserva espacios de estudio y salas de forma sencilla.
+            Parte de Eduardo Reserva espacios de estudio y salas de forma sencilla.
           </p>
           <div className="mt-6 text-xs text-gray-400">
             <p>Subsección: <span className="font-semibold">{activeSubsection}</span></p>
