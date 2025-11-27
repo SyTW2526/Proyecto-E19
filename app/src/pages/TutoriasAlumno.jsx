@@ -8,8 +8,7 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
   const API_BASE =
     (typeof window !== 'undefined' && (window.__API_BASE__ || window.localStorage.getItem('API_BASE'))) ||
     (typeof process !== 'undefined' && (process.env && (process.env.REACT_APP_API_BASE || process.env.VITE_API_BASE))) ||
-    'http://localhost:5173';
-
+    'http://localhost:4000';
   const fetchApi = (path, opts = {}) => {
     const p = path.startsWith('/') ? path : `/${path}`;
     const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
@@ -123,7 +122,7 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
                         <div className="flex-1">
                           <div className="text-lg font-semibold text-gray-800">{p.name}</div>
                           <div className="text-xs text-gray-500 mt-1">
-                            {p.horarios.length} {p.horarios.length === 1 ? 'sesion' : 'franjas'}
+                            {p.horarios.length} {p.horarios.length === 1 ? 'sesión' : 'sesiones'}
                           </div>
                           <ul className="mt-3 p-0 text-sm text-gray-600 space-y-1 max-h-28 overflow-auto pr-2 text-left">
                             {p.horarios.slice(0, 6).map((h) => (

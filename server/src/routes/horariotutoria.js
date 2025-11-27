@@ -176,4 +176,19 @@ router.get("/reservas/profesor/:id", async (req, res) => {
   }
 });
 
+// Eliminar un horario
+router.delete("/:id", async (req, res) => {
+  try {
+    const horario = await HorarioTutoria.findByIdAndDelete(req.params.id);
+
+    if (!horario) {
+      return res.status(404).json({ error: "Horario no encontrado." });
+    }
+
+    res.json({ message: "Horario eliminado correctamente." });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
