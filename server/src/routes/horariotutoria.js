@@ -41,7 +41,7 @@ router.post("/", async (req, res) => {
 });
 
 // Obtener horarios de un profesor
-router.get("/horarios/:profesorId", async (req, res) => {
+router.get("/:profesorId", async (req, res) => {
   try {
     const horarios = await HorarioTutoria.find({
       profesor: req.params.profesorId,

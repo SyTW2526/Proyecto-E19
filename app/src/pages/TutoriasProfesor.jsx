@@ -265,7 +265,7 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
       return;
     }
     try {
-      const res = await fetchApi(`/api/horarios?profesorId=${encodeURIComponent(uid)}`);
+      const res = await fetchApi(`/api/horarios/${encodeURIComponent(uid)}`);
       if (!res.ok) throw new Error('No horarios');
       const data = await res.json();
       // data expected array of horarios
