@@ -378,6 +378,17 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
     setShowCreateModal(false);
   };
 
+  // Agrupar reservas por asignatura para la vista "reservar"
+  const reservasGrouped = useMemo(() => {
+    const map = new Map();
+    (localReservas || []).forEach((r) => {
+      const key = (r.asignatura || 'Sin asignatura').toString().trim() || 'Sin asignatura';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(r);
+    });
+    return Array.from(map.entries()).map(([asignatura, items]) => ({ asignatura, items }));
+  }, [localReservas]);
+
   return (
     <div className="bg-white rounded-lg p-4 sm:p-6 lg:p-8 shadow-sm">
       <div className="min-h-[300px]">
@@ -609,26 +620,44 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
               <h3 className="text-lg font-semibold">Solicitudes / Crear horario</h3>
             </div>
 
-            <div className="space-y-3">
-              {localReservas.map((s) => (
-                <div key={s._id || s.id} className="flex items-center justify-between p-3 border rounded">
-                  <div>
-                    <div className="font-semibold">{s.asignatura || 'Sin asignatura'}</div>
-                    <div className="text-xs text-gray-500">
-                      {s.diaSemana ? `${s.diaSemana} ` : ''}{s.horaInicio ? `${s.horaInicio}` : ''}{s.horaFin ? ` - ${s.horaFin}` : ''} {s.modalidad ? `· ${s.modalidad}` : ''}
+            <div className="space-y-4">
+              {reservasGrouped.length === 0 ? (
+                <div className="text-sm text-gray-500">No hay reservas creadas.</div>
+              ) : (
+                reservasGrouped.map((g) => (
+                  <div key={g.asignatura} className="bg-gray-50 rounded-xl border border-gray-200 p-4 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-md font-semibold text-gray-800">{g.asignatura}</div>
+                        <div className="text-xs text-gray-500">{g.items.length} {g.items.length === 1 ? 'sesión' : 'sesiones'}</div>
+                      </div>
+                      <div className="text-sm text-gray-600"> </div>
                     </div>
-                    {s.lugar && <div className="text-xs text-gray-400">{s.lugar}</div>}
+
+                    <div className="mt-3 space-y-2">
+                      {g.items.map((s) => (
+                        <div
+                          key={s._id || s.id}
+                          className="flex items-center justify-between bg-gray-200 border border-gray-200 rounded-md p-2 shadow-sm"
+                        >
+                          <div className="text-sm text-gray-800">
+                            {s.diaSemana ? `${s.diaSemana} ` : ''}{s.horaInicio}{s.horaFin ? ` - ${s.horaFin}` : ''}
+                            {s.modalidad ? <span className="text-xs text-gray-500 ml-2">· {s.modalidad}</span> : null}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => deleteHorario(s._id || s.id)}
+                              className="text-xs px-2 py-1 bg-red-500 text-white rounded"
+                            >
+                              Borrar
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => deleteHorario(s._id || s.id)}
-                      className="px-3 py-1 bg-red-500 text-white rounded"
-                    >
-                      Borrar
-                    </button>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </>
         )}
