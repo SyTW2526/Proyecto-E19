@@ -215,6 +215,158 @@ function TutoriasProfesor({ menu, activeSubsection }) {
   const headerHeight = 40; // altura del título del día (estático)
   const timelineHeight = totalHours * hourHeight; // altura del área scrollable
 
+  // --- reservas locales para la vista "reservar" ---
+  const [localReservas, setLocalReservas] = useState([]);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newReserva, setNewReserva] = useState({
+    asignatura: '',
+    modalidad: 'presencial',
+    lugar: '',
+    diaSemana: 'lunes',
+    horaInicio: '09:00',
+    horaFin: '10:00',
+    activo: true,
+    alumno: '',
+  });
+
+  const reservasStorageKey = () => 'local_reservas';
+
+  // helper para obtener id de usuario actual (ajusta si tu auth difiere)
+  const getCurrentUserId = () => {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('userId') || null;
+  };
+  
+  // cargar horarios desde /api/horarios?profesorId=... ; fallback a localStorage
+  const loadUserSchedules = async () => {
+    const uid = getCurrentUserId();
+    if (!uid) {
+      try {
+        const raw = localStorage.getItem(reservasStorageKey());
+        setLocalReservas(raw ? JSON.parse(raw) : []);
+      } catch {
+        setLocalReservas([]);
+      }
+      return;
+    }
+    try {
+      const res = await fetch(`/api/horarios?profesorId=${encodeURIComponent(uid)}`);
+      if (!res.ok) throw new Error('No horarios');
+      const data = await res.json();
+      // data expected array of horarios
+      setLocalReservas(Array.isArray(data) ? data : []);
+      localStorage.setItem(reservasStorageKey(), JSON.stringify(Array.isArray(data) ? data : []));
+    } catch (err) {
+      console.error('loadUserSchedules error', err);
+      try {
+        const raw = localStorage.getItem(reservasStorageKey());
+        setLocalReservas(raw ? JSON.parse(raw) : []);
+      } catch {
+        setLocalReservas([]);
+      }
+    }
+  };
+
+  // cargar cuando montamos y cada vez que entramos en la pestaña reservar
+  useEffect(() => {
+    if (tab === 'reservar') loadUserSchedules();
+  }, [tab]);
+
+  // crear horario en backend (/api/horarios) o guardar local si no hay usuario
+  const createHorario = async (horario) => {
+    const uid = getCurrentUserId();
+    if (!uid) {
+      const id = `local_${Date.now()}`;
+      const toSave = { ...horario, _id: id };
+      const next = [toSave, ...localReservas];
+      localStorage.setItem(reservasStorageKey(), JSON.stringify(next));
+      setLocalReservas(next);
+      return;
+    }
+    try {
+      const payload = { ...horario, profesor: uid };
+      const res = await fetch('/api/horarios', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error('Error creando horario');
+      const created = await res.json();
+      // añadir al estado (el backend debería devolver el documento creado)
+      setLocalReservas((prev) => [created, ...prev]);
+      localStorage.setItem(reservasStorageKey(), JSON.stringify([created, ...localReservas]));
+    } catch (err) {
+      console.error('createHorario error, guardando local', err);
+      const id = `local_${Date.now()}`;
+      const toSave = { ...horario, _id: id };
+      const next = [toSave, ...localReservas];
+      localStorage.setItem(reservasStorageKey(), JSON.stringify(next));
+      setLocalReservas(next);
+    }
+  };
+  
+  // eliminar horario: si viene del servidor (id no empieza por 'local_') llamar DELETE /api/horarios/:id
+  const deleteHorario = async (id) => {
+    if (!id) return;
+    if (!confirm('Borrar horario?')) return;
+    if (!id.startsWith('local_')) {
+      try {
+        const res = await fetch(`/api/horarios/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Error borrando');
+        // quitar del estado
+        const next = localReservas.filter((r) => r._id !== id && r.id !== id);
+        setLocalReservas(next);
+        localStorage.setItem(reservasStorageKey(), JSON.stringify(next));
+        return;
+      } catch (err) {
+        console.error('deleteHorario error', err);
+        alert('No se pudo borrar en servidor. Se eliminará localmente.');
+      }
+    }
+    // fallback/local delete
+    const next = localReservas.filter((r) => r._id !== id);
+    setLocalReservas(next);
+    localStorage.setItem(reservasStorageKey(), JSON.stringify(next));
+  };
+
+  const openCreateModal = () => {
+    setNewReserva({
+      asignatura: '',
+      modalidad: 'presencial',
+      lugar: '',
+      diaSemana: 'lunes',
+      horaInicio: '09:00',
+      horaFin: '10:00',
+      activo: true,
+      alumno: localStorage.getItem('userName') || '',
+    });
+    setShowCreateModal(true);
+  };
+
+  const closeCreateModal = () => {
+    setShowCreateModal(false);
+  };
+
+  const saveNewReserva = async () => {
+    // validación básica
+    if (!newReserva.asignatura || !newReserva.diaSemana || !newReserva.horaInicio || !newReserva.horaFin) {
+      alert('Rellena asignatura, día y horas.');
+      return;
+    }
+    const payload = {
+      asignatura: newReserva.asignatura,
+      modalidad: newReserva.modalidad,
+      lugar: newReserva.lugar,
+      diaSemana: newReserva.diaSemana,
+      horaInicio: newReserva.horaInicio,
+      horaFin: newReserva.horaFin,
+      activo: newReserva.activo ?? true,
+      meta: newReserva.meta || null,
+    };
+    await createHorario(payload);
+    setShowCreateModal(false);
+  };
+
   return (
     <div className="bg-white rounded-lg p-4 sm:p-6 lg:p-8 shadow-sm">
       <div className="min-h-[300px]">
@@ -234,6 +386,19 @@ function TutoriasProfesor({ menu, activeSubsection }) {
               <button onClick={nextWeek} className="px-3 py-1 bg-violet-50 text-violet-600 rounded border border-violet-100">»</button>
             </div>
           ) : null}
+
+          {/* Botón "Nuevo horario" en el header solo para la pestaña reservar */}
+          {tab === 'reservar' && (
+            <div className="ml-4">
+              <button
+                onClick={openCreateModal}
+                className="px-3 py-1 bg-violet-600 text-white rounded"
+                aria-label="Nuevo horario"
+              >
+                Nuevo horario
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Gestión de tutorías */}
@@ -426,24 +591,34 @@ function TutoriasProfesor({ menu, activeSubsection }) {
                   </div>
                 </div>
               </div>
-              <div className="mt-2 text-xs text-violet-500">Vista semanal (L-V): días fijos, desplaza las horas para ver el calendario.</div>
-            </div>
+              </div>
           </>
         )}
 
         {/* Solicitudes de tutoría */}
         {tab === 'reservar' && sesiones && (
           <>
+            <div className="mb-3">
+              <h3 className="text-lg font-semibold">Solicitudes / Crear horario</h3>
+            </div>
+
             <div className="space-y-3">
-              {sesiones.map((s) => (
-                <div key={s.id} className="flex items-center justify-between p-3 border rounded">
+              {localReservas.map((s) => (
+                <div key={s._id || s.id} className="flex items-center justify-between p-3 border rounded">
                   <div>
-                    <div className="font-semibold">{s.alumno}</div>
-                    <div className="text-xs text-gray-500">{s.motivo} · {s.fecha}</div>
+                    <div className="font-semibold">{s.asignatura || 'Sin asignatura'}</div>
+                    <div className="text-xs text-gray-500">
+                      {s.diaSemana ? `${s.diaSemana} ` : ''}{s.horaInicio ? `${s.horaInicio}` : ''}{s.horaFin ? ` - ${s.horaFin}` : ''} {s.modalidad ? `· ${s.modalidad}` : ''}
+                    </div>
+                    {s.lugar && <div className="text-xs text-gray-400">{s.lugar}</div>}
                   </div>
                   <div className="flex gap-2">
-                    <button className="px-3 py-1 bg-blue-600 text-white rounded">Aceptar</button>
-                    <button className="px-3 py-1 bg-gray-300 text-gray-700 rounded">Rechazar</button>
+                    <button
+                      onClick={() => deleteHorario(s._id || s.id)}
+                      className="px-3 py-1 bg-red-500 text-white rounded"
+                    >
+                      Borrar
+                    </button>
                   </div>
                 </div>
               ))}
@@ -451,19 +626,92 @@ function TutoriasProfesor({ menu, activeSubsection }) {
           </>
         )}
 
-        {/* Fallback si la pestaña no tiene contenido específico */}
-        {!Object.prototype.hasOwnProperty.call(contenidos, tab) && (
-          <div className="mt-4">
-            <p className="text-sm text-gray-600 mb-4">
-              Contenido por defecto para la pestaña seleccionada.
-            </p>
-            <div className="p-3 border rounded">Ajusta los ids del menú a: "gestion-tutorias", "mis-tutorias", "historial", "solicitudes".</div>
-          </div>
-        )}
-
+        {/* Modal de creación (local) */}
+        {showCreateModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/20" onClick={closeCreateModal} />
+            <div className="relative z-10 w-full max-w-2xl mx-4 bg-white rounded-lg shadow-xl overflow-auto max-h-[85vh]">
+              <div className="flex items-center justify-between p-4 border-b">
+                <h3 className="text-lg font-semibold">Crear horario de tutoría</h3>
+                <button onClick={closeCreateModal} className="text-gray-500 hover:text-gray-700 ml-4">Cerrar ✕</button>
+              </div>
+              <div className="p-4">
+                {/* Formulario en dos columnas */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500">Asignatura</label>
+                    <input
+                      value={newReserva.asignatura}
+                      onChange={(e) => setNewReserva({ ...newReserva, asignatura: e.target.value })}
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Día de la semana</label>
+                    <select
+                      value={newReserva.diaSemana}
+                      onChange={(e) => setNewReserva({ ...newReserva, diaSemana: e.target.value })}
+                      className="w-full p-2 border rounded"
+                    >
+                      <option value="lunes">lunes</option>
+                      <option value="martes">martes</option>
+                      <option value="miercoles">miercoles</option>
+                      <option value="jueves">jueves</option>
+                      <option value="viernes">viernes</option>
+                      <option value="sabado">sabado</option>
+                      <option value="domingo">domingo</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Modalidad</label>
+                    <select
+                      value={newReserva.modalidad}
+                      onChange={(e) => setNewReserva({ ...newReserva, modalidad: e.target.value })}
+                      className="w-full p-2 border rounded"
+                    >
+                      <option value="presencial">presencial</option>
+                      <option value="online">online</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Lugar</label>
+                    <input
+                      value={newReserva.lugar}
+                      onChange={(e) => setNewReserva({ ...newReserva, lugar: e.target.value })}
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Hora inicio</label>
+                    <input
+                      type="time"
+                      value={newReserva.horaInicio || '09:00'}
+                      onChange={(e) => setNewReserva({ ...newReserva, horaInicio: e.target.value })}
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Hora fin</label>
+                    <input
+                      type="time"
+                      value={newReserva.horaFin || '10:00'}
+                      onChange={(e) => setNewReserva({ ...newReserva, horaFin: e.target.value })}
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                 </div>
+                 <div className="flex justify-end gap-2 mt-4">
+                   <button onClick={closeCreateModal} className="px-3 py-1 bg-gray-200 rounded">Cancelar</button>
+                   <button onClick={saveNewReserva} className="px-3 py-1 bg-violet-600 text-white rounded">Guardar</button>
+                 </div>
+               </div>
+             </div>
+           </div>
+         )}
       </div>
     </div>
   );
 }
 
 export default TutoriasProfesor;
+
