@@ -5,6 +5,7 @@ import Icon from '../components/Icon';
 import DashboardMain from './DashboardMain';
 import TutoriasPage from './TutoriasPage';
 import ReservaEspacios from './ReservaEspacios';
+import MisReservas from './MisReservas';
 import Calendario from './Calendario';
 
 function Dashboard({ user }) {
@@ -129,7 +130,9 @@ function Dashboard({ user }) {
                 <TutoriasPage menu={menu} activeSubsection={activeSubsection} />
               )}
               {currentSection === 'espacios' && (
-                <ReservaEspacios menu={menu} activeSubsection={activeSubsection} />
+                activeSubsection === 'mis-reservas'
+                  ? <MisReservas />
+                  : <ReservaEspacios menu={menu} activeSubsection={activeSubsection} />
               )}
               {currentSection === 'calendario' && (
                 <Calendario menu={menu} activeSubsection={activeSubsection} />

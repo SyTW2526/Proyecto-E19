@@ -11,7 +11,8 @@ const RecursoSchema = new Schema({
     required: true 
   },
   capacidad: { type: Number, default: 1 },
-  ubicacion: { type: String }, 
+  ubicacion: { type: String },
+  descripcion: { type: String },
   estaActivo: { type: Boolean, default: true } 
 }, {
   timestamps: true
@@ -20,7 +21,9 @@ const RecursoSchema = new Schema({
 const ReservaRecursoSchema = new Schema({
   recurso: { type: Schema.Types.ObjectId, ref: "Recurso", required: true },
   usuario: { type: Schema.Types.ObjectId, ref: "User", required: true },
-  fechaReserva: { type: Date, required: true }
+  fechaReserva: { type: Date, required: true },
+  estado: { type: String, enum: ["confirmada", "cancelada", "completada"], default: "confirmada" },
+  notas: { type: String }
 }, {
   timestamps: true
 });
