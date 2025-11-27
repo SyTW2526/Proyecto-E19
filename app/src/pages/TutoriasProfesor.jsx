@@ -382,10 +382,6 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
     <div className="bg-white rounded-lg p-4 sm:p-6 lg:p-8 shadow-sm">
       <div className="min-h-[300px]">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
-            <Icon name={item.icon || 'user-tie'} className="w-10 h-10 text-violet-600" />
-            <h2 className="text-lg font-bold text-gray-900">{item.label || 'Zona Profesor'}</h2>
-          </div>
 
           {/* Controles de semana (solo en historial) */}
           {tab === 'historial' ? (

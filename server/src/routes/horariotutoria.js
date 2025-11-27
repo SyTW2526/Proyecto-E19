@@ -40,6 +40,17 @@ router.post("/", async (req, res) => {
   }
 });
 
+// Obtener todos los horarios activos
+router.get("/", async (req, res) => {
+  try {
+    const horarios = await HorarioTutoria.find({ activo: true }).sort({ diaSemana: 1, horaInicio: 1 }).lean();
+    return res.json(horarios);
+  } catch (err) {
+    console.error("GET /api/horarios error", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // Obtener horarios de un profesor
 router.get("/:profesorId", async (req, res) => {
   try {
