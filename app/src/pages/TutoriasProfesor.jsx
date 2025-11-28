@@ -240,7 +240,7 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
   const API_BASE = (
     (typeof window !== 'undefined' && (window.__API_BASE__ || window.localStorage.getItem('API_BASE'))) ||
     (typeof process !== 'undefined' && (process.env && (process.env.REACT_APP_API_BASE || process.env.VITE_API_BASE))) ||
-    'http://localhost:4000'
+    'http://localhost:5173'
   );
   const fetchApi = (path, opts = {}) => {
     const p = path.startsWith('/') ? path : `/${path}`;
@@ -293,31 +293,32 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
     if (!confirm('Aceptar esta tutoría?')) return;
     try {
       const res = await fetchApi(`/api/tutorias/${encodeURIComponent(id)}`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estado: 'Confirmada' }),
+        body: JSON.stringify({ estado: 'confirmada' }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       await loadPendingRequests();
     } catch (err) {
-      console.error('acceptRequest error', err);
+      console.error('acceptRequest (PUT) error', err);
       alert('No se pudo aceptar la solicitud.');
     }
   };
 
   const cancelRequest = async (id) => {
-    if (!confirm('Cancelar esta tutoría?')) return;
+    if (!confirm('¿Eliminar esta tutoría (marcar como cancelada)?')) return;
     try {
       const res = await fetchApi(`/api/tutorias/${encodeURIComponent(id)}`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ estado: 'Cancelada' }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      // recargar la lista de pendientes
       await loadPendingRequests();
     } catch (err) {
-      console.error('cancelRequest error', err);
-      alert('No se pudo cancelar la solicitud.');
+      console.error('cancelRequest (PUT) error', err);
+      alert('No se pudo eliminar/la marcar la solicitud como cancelada.');
     }
   };
 
@@ -328,14 +329,18 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
     if (!nuevoFin) return;
     try {
       const res = await fetchApi(`/api/tutorias/${encodeURIComponent(id)}`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fechaInicio: new Date(nuevoInicio).toISOString(), fechaFin: new Date(nuevoFin).toISOString(), estado: 'Reprogramada' }),
+        body: JSON.stringify({
+          fechaInicio: new Date(nuevoInicio).toISOString(),
+          fechaFin: new Date(nuevoFin).toISOString(),
+          estado: 'Reprogramada',
+        }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       await loadPendingRequests();
     } catch (err) {
-      console.error('reprogramRequest error', err);
+      console.error('reprogramRequest (PUT) error', err);
       alert('No se pudo reprogramar la solicitud.');
     }
   };
