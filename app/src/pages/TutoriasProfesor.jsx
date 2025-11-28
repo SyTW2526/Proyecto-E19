@@ -53,6 +53,9 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
   // estado para datos traídos desde la base de datos (historial)
   const [dbHistorial, setDbHistorial] = useState(null);
   const [, setHistorialError] = useState(null);
+  // solicitudes pendientes (estado)
+  const [pendingRequests, setPendingRequests] = useState([]);
+  const [loadingPending, setLoadingPending] = useState(false);
   // estado para modal de detalles de sesión
   const [selectedSession, setSelectedSession] = useState(null);
   // emails resueltos para mostrar en el modal (usamos solo el setter para evitar warning si no se leen directamente)
@@ -255,6 +258,151 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
     return localStorage.getItem('userId') || null;
   };
   
+  // --- solicitudes pendientes: cargar y acciones (usa el ObjectId del usuario actual) ---
+  const loadPendingRequests = async () => {
+    const uid = getCurrentUserId();
+    if (!uid) {
+      setPendingRequests([]);
+      return;
+    }
+    setLoadingPending(true);
+    try {
+      // Preferimos consultar por profesor=<uid> y estado pendiente
+      let res = await fetchApi(`/api/tutorias?profesor=${encodeURIComponent(uid)}&estado=pendiente`);
+      // fallback a ruta alternativa si es necesario
+      if (!res.ok) res = await fetchApi(`/api/tutorias?profesorId=${encodeURIComponent(uid)}&estado=pendiente`);
+      if (!res.ok) {
+        setPendingRequests([]);
+        return;
+      }
+      const data = await res.json();
+      setPendingRequests(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error cargando solicitudes pendientes:', err);
+      setPendingRequests([]);
+    } finally {
+      setLoadingPending(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tab === 'profesores') loadPendingRequests();
+  }, [tab]);
+
+  const acceptRequest = async (id) => {
+    if (!confirm('Aceptar esta tutoría?')) return;
+    try {
+      const res = await fetchApi(`/api/tutorias/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: 'Confirmada' }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await loadPendingRequests();
+    } catch (err) {
+      console.error('acceptRequest error', err);
+      alert('No se pudo aceptar la solicitud.');
+    }
+  };
+
+  const cancelRequest = async (id) => {
+    if (!confirm('Cancelar esta tutoría?')) return;
+    try {
+      const res = await fetchApi(`/api/tutorias/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: 'Cancelada' }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await loadPendingRequests();
+    } catch (err) {
+      console.error('cancelRequest error', err);
+      alert('No se pudo cancelar la solicitud.');
+    }
+  };
+
+  const reprogramRequest = async (id) => {
+    const nuevoInicio = prompt('Nueva fecha/hora de inicio (ISO o YYYY-MM-DDTHH:MM):');
+    if (!nuevoInicio) return;
+    const nuevoFin = prompt('Nueva fecha/hora de fin (ISO o YYYY-MM-DDTHH:MM):', nuevoInicio);
+    if (!nuevoFin) return;
+    try {
+      const res = await fetchApi(`/api/tutorias/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fechaInicio: new Date(nuevoInicio).toISOString(), fechaFin: new Date(nuevoFin).toISOString(), estado: 'Reprogramada' }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await loadPendingRequests();
+    } catch (err) {
+      console.error('reprogramRequest error', err);
+      alert('No se pudo reprogramar la solicitud.');
+    }
+  };
+
+  // --- Nuevo: funciones para el menú de acciones en tabla de reservas ---
+  const onToggleReserva = async (reserva) => {
+    if (!reserva._id) return;
+    const nuevaReserva = { ...reserva, activo: !reserva.activo };
+    try {
+      const res = await fetchApi(`/api/horarios/${encodeURIComponent(reserva._id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activo: nuevaReserva.activo }),
+      });
+      if (!res.ok) throw new Error('Error al actualizar reserva');
+      setLocalReservas((prev) =>
+        prev.map((r) => (r._id === reserva._id ? nuevaReserva : r))
+      );
+    } catch (err) {
+      console.error('Error toggling reserva', err);
+      alert('Error al actualizar reserva');
+    }
+  };
+
+  const onDeleteReserva = async (reserva) => {
+    if (!reserva._id) return;
+    if (!confirm('¿Borrar esta reserva?')) return;
+    try {
+      const res = await fetchApi(`/api/horarios/${encodeURIComponent(reserva._id)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Error al borrar reserva');
+      setLocalReservas((prev) => prev.filter((r) => r._id !== reserva._id));
+    } catch (err) {
+      console.error('Error deleting reserva', err);
+      alert('Error al borrar reserva');
+    }
+  };
+
+  // --- Nuevo: estado y funciones para el modal de detalles ---
+  const [detalleReserva, setDetalleReserva] = useState(null);
+  const [cargandoDetalle, setCargandoDetalle] = useState(false);
+
+  const openDetalle = (reserva) => {
+    setCargandoDetalle(true);
+    setDetalleReserva(null);
+    fetchApi(`/api/horarios/${encodeURIComponent(reserva._id)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setDetalleReserva(data);
+        setCargandoDetalle(false);
+      })
+      .catch((err) => {
+        console.error('Error cargando detalle de reserva', err);
+        setCargandoDetalle(false);
+      });
+  };
+
+  const closeDetalle = () => {
+    setDetalleReserva(null);
+  };
+
+  // --- Nuevo: efecto para cargar reservas al iniciar ---
+  useEffect(() => {
+    if (tab === 'reservar') {
+      loadUserSchedules();
+    }
+  }, [tab]);
+
   // cargar horarios desde /api/horarios?profesorId=... ; fallback a localStorage
   const loadUserSchedules = async () => {
     const uid = getCurrentUserId();
@@ -470,24 +618,33 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
         </div>
 
         {/* Gestión de tutorías */}
-        {tab === 'profesores' && sesiones && (
-          <>
-            <div className="space-y-3">
-              {sesiones.map((s) => (
-                <div key={s.id} className="flex items-center justify-between p-3 border rounded">
-                  <div>
-                    <div className="font-semibold">{s.alumno}</div>
-                    <div className="text-xs text-gray-500">{s.hora} · {s.estado}</div>
+        {tab === 'profesores' && (
+          <div className="space-y-3">
+            {loadingPending ? (
+              <div className="text-sm text-gray-500">Cargando solicitudes...</div>
+            ) : pendingRequests.length === 0 ? (
+              <div className="text-sm text-gray-500">No hay solicitudes pendientes.</div>
+            ) : (
+              pendingRequests.map((r) => (
+                <div key={r._id || r.id} className="bg-white rounded-lg p-3 border shadow-sm flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="font-semibold">
+                      {(r.estudiante && (r.estudiante.name || r.estudiante.username)) || r.alumno || 'Estudiante'}
+                    </div>
+                    <div className="text-xs text-gray-500">{r.tema || r.title || 'Tutoria solicitada'}</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {r.fechaInicio ? new Date(r.fechaInicio).toLocaleString() : (r.fecha || '')}
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button className="px-3 py-1 bg-green-500 text-white rounded">Confirmar</button>
-                    <button className="px-3 py-1 bg-red-500 text-white rounded">Cancelar</button>
-                    <button className="px-3 py-1 bg-yellow-400 text-white rounded">Reprogramar</button>
+                  <div className="flex flex-col sm:flex-row gap-2 ml-4">
+                    <button onClick={() => acceptRequest(r._id || r.id)} className="px-3 py-1 bg-green-500 text-white rounded">Aceptar</button>
+                    <button onClick={() => cancelRequest(r._id || r.id)} className="px-3 py-1 bg-red-500 text-white rounded">Cancelar</button>
+                    <button onClick={() => reprogramRequest(r._id || r.id)} className="px-3 py-1 bg-yellow-400 text-white rounded">Reprogramar</button>
                   </div>
                 </div>
-              ))}
-            </div>
-          </>
+              ))
+            )}
+          </div>
         )}
 
         {/* Mis tutorías */}
