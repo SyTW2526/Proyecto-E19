@@ -56,6 +56,9 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
   // solicitudes pendientes (estado)
   const [pendingRequests, setPendingRequests] = useState([]);
   const [loadingPending, setLoadingPending] = useState(false);
+  // mis tutorías (confirmadas) para el profesor actual
+  const [mySessions, setMySessions] = useState([]);
+  const [loadingMySessions, setLoadingMySessions] = useState(false);
   // estado para modal de detalles de sesión
   const [selectedSession, setSelectedSession] = useState(null);
   // emails resueltos para mostrar en el modal (usamos solo el setter para evitar warning si no se leen directamente)
@@ -287,6 +290,32 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
 
   useEffect(() => {
     if (tab === 'profesores') loadPendingRequests();
+  }, [tab]);
+
+  // cargar tutorías confirmadas del profesor para "mis-tutorias"
+  const loadMySessions = async () => {
+    const uid = getCurrentUserId();
+    if (!uid) {
+      setMySessions([]);
+      return;
+    }
+    setLoadingMySessions(true);
+    try {
+      let res = await fetchApi(`/api/tutorias?profesor=${encodeURIComponent(uid)}&estado=confirmada`);
+      if (!res.ok) res = await fetchApi(`/api/tutorias?profesorId=${encodeURIComponent(uid)}&estado=confirmada`);
+      if (!res.ok) { setMySessions([]); return; }
+      const data = await res.json();
+      setMySessions(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error cargando mis tutorías confirmadas:', err);
+      setMySessions([]);
+    } finally {
+      setLoadingMySessions(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tab === 'mis-tutorias') loadMySessions();
   }, [tab]);
 
   const acceptRequest = async (id) => {
@@ -592,6 +621,12 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
     return Array.from(map.entries()).map(([asignatura, items]) => ({ asignatura, items }));
   }, [localReservas]);
 
+  // mostrar solo las que están en estado "pendiente"
+  const visiblePendingRequests = (pendingRequests || []).filter((r) => {
+    const st = (r.estado || r.status || '').toString().toLowerCase();
+    return st === 'pendiente' || st === 'pending';
+  });
+
   return (
     <div className="bg-white rounded-lg p-4 sm:p-6 lg:p-8 shadow-sm">
       <div className="min-h-[300px]">
@@ -627,10 +662,10 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
           <div className="space-y-3">
             {loadingPending ? (
               <div className="text-sm text-gray-500">Cargando solicitudes...</div>
-            ) : pendingRequests.length === 0 ? (
+            ) : visiblePendingRequests.length === 0 ? (
               <div className="text-sm text-gray-500">No hay solicitudes pendientes.</div>
             ) : (
-              pendingRequests.map((r) => (
+              visiblePendingRequests.map((r) => (
                 <div key={r._id || r.id} className="bg-white rounded-lg p-3 border shadow-sm flex items-start justify-between">
                   <div className="flex-1">
                     <div className="font-semibold">
@@ -652,21 +687,27 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
           </div>
         )}
 
-        {/* Mis tutorías */}
-        {tab === 'mis-tutorias' && sesiones && (
-          <>
-            <div className="space-y-3">
-              {sesiones.map((s) => (
-                <div key={s.id} className="flex items-center justify-between p-3 border rounded">
+        {/* Mis tutorías (solo CONFIRMADAS del profesor actual) */}
+        {tab === 'mis-tutorias' && (
+          <div className="space-y-3">
+            {loadingMySessions ? (
+              <div className="text-sm text-gray-500">Cargando mis tutorías...</div>
+            ) : mySessions.length === 0 ? (
+              <div className="text-sm text-gray-500">No hay tutorías confirmadas.</div>
+            ) : (
+              mySessions.map((s) => (
+                <div key={s._id || s.id} className="flex items-center justify-between p-3 border rounded">
                   <div>
-                    <div className="font-semibold">{s.alumno}</div>
-                    <div className="text-xs text-gray-500">{s.asunto} · {s.fecha}</div>
+                    <div className="font-semibold">{s.alumno || (s.estudiante && (s.estudiante.name || s.estudiante.username)) || 'Estudiante'}</div>
+                    <div className="text-xs text-gray-500">
+                      {(s.tema || s.title || '')}{' '}{s.fechaInicio ? `· ${new Date(s.fechaInicio).toLocaleString()}` : (s.fecha ? `· ${s.fecha}` : '')}
+                    </div>
                   </div>
                   <div className="text-xs text-gray-600">Ver detalles</div>
                 </div>
-              ))}
-            </div>
-          </>
+              ))
+            )}
+          </div>
         )}
 
         {/* Historial: calendario semanal con días estáticos y timeline scrollable */}
