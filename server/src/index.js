@@ -11,6 +11,7 @@ import userRouter from "./routes/usuarios.js";
 import tutoriaRouter from "./routes/tutorias.js";
 import authRouter from "./routes/auth.js";
 import recursoRouter from "./routes/recursos.js";
+import tutoriasRouter from "./routes/horariotutoria.js";
 
 import path from "path";
 import { fileURLToPath } from "url";
@@ -54,6 +55,7 @@ app.use("/api/usuarios", userRouter);
 app.use("/api/tutorias", tutoriaRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/recursos", recursoRouter);
+app.use("/api/horarios", tutoriasRouter);
 
 // app.get("*", (req, res) => {
 //   res.sendFile(path.join(staticAppPath, "index.html"));

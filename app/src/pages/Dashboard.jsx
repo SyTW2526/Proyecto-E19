@@ -126,7 +126,7 @@ function Dashboard({ user }) {
                 <DashboardMain menu={menu} activeSubsection={activeSubsection} />
               )}
               {currentSection === 'tutorias' && (
-                <TutoriasPage menu={menu} activeSubsection={activeSubsection} />
+                <TutoriasPage menu={menu} activeSubsection={activeSubsection} user={user} />
               )}
               {currentSection === 'espacios' && (
                 <ReservaEspacios menu={menu} activeSubsection={activeSubsection} />
