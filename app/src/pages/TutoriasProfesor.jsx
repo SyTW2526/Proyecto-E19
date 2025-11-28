@@ -134,14 +134,26 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
       .filter((s) => s.startDate);
   }, [effectiveHistorial]);
 
+  // mostrar solo el historial correspondiente al profesor actual
+  const visibleHistorial = useMemo(() => {
+    const uid = (user && (user._id || user.id)) || (typeof window !== 'undefined' && localStorage.getItem('userId')) || null;
+    if (!uid) return parsedHistorial;
+    return (parsedHistorial || []).filter((s) => {
+      const prof = s.profesor || s.professor || (s.profesorId || s.professorId) || null;
+      // comparar como string con ObjectId posibles
+      if (!prof) return false;
+      return (prof.toString ? prof.toString() : String(prof)) === String(uid);
+    });
+  }, [parsedHistorial, user]);
+
   const sessionsByDay = useMemo(() => {
     const map = {};
     daysOfWeek.forEach((d) => {
       const key = d.toDateString();
       map[key] = [];
     });
-    parsedHistorial.forEach((s) => {
-      const key = s.date.toDateString();
+    (visibleHistorial || []).forEach((s) => {
+      const key = (s.date || s.startDate || new Date()).toDateString();
       if (map[key]) map[key].push(s);
     });
     // ordenar por hora dentro de cada día
@@ -149,7 +161,7 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
       map[k].sort((a, b) => a.date - b.date);
     });
     return map;
-  }, [daysOfWeek, parsedHistorial]);
+  }, [daysOfWeek, visibleHistorial]);
 
   const prevWeek = () => {
     const d = new Date(weekStart);
@@ -777,6 +789,18 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
                             const durationHours = end ? Math.max((end - start) / 3600000, 0.25) : 0.5;
                             const blockHeight = Math.max(40, durationHours * hourHeight);
                             const modality = s.modalidad || s.modality || '';
+                            // normalizar estado y elegir colores
+                            const estado = (s.estado || s.status || '').toString().toLowerCase();
+                            const isConfirmada = estado === 'confirmada' || estado === 'confirmed' || estado === 'confirmado';
+                            const isPendiente = estado === 'pendiente' || estado === 'pending';
+                            // gradiente para el fondo del bloque (verde = confirmada, amarillo = pendiente, violeta = por defecto)
+                            const gradientClass = isConfirmada
+                              ? 'from-green-600 to-green-400'
+                              : isPendiente
+                              ? 'from-yellow-600 to-violet-400'
+                              : 'from-violet-800 to-yellow-600';
+                            const leftBarClass = isConfirmada ? 'bg-green-300' : isPendiente ? 'bg-yellow-300' : 'bg-white/30';
+
                             return (
                               <div
                                 key={s._id || s.id}
@@ -793,8 +817,8 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
                                 title={`${s.title || 'Tutoría'}${modality ? ' — ' + modality : ''}`}
                               >
                                 <div className="h-full flex">
-                                  <div className="w-1 bg-white/30 rounded-l-md" />
-                                  <div className="flex-1 bg-gradient-to-r from-violet-800 to-violet-600 text-white p-2 rounded-r-lg">
+                                  <div className={`w-1 ${leftBarClass} rounded-l-md`} />
+                                  <div className={`flex-1 bg-gradient-to-r ${gradientClass} text-white p-2 rounded-r-lg`}>
                                     {/* título */}
                                     <div className="text-sm font-semibold leading-tight truncate">{s.title || 'Tutoría'}</div>
                                     {/* modalidad */}
