@@ -627,6 +627,12 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
     return st === 'pendiente' || st === 'pending';
   });
 
+  // mostrar solo las que están confirmadas en "mis-tutorias"
+  const visibleMySessions = (mySessions || []).filter((s) => {
+    const st = (s.estado || s.status || '').toString().toLowerCase();
+    return st === 'confirmada' || st === 'confirmado' || st === 'confirmed';
+  });
+
   return (
     <div className="bg-white rounded-lg p-4 sm:p-6 lg:p-8 shadow-sm">
       <div className="min-h-[300px]">
@@ -692,10 +698,10 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
           <div className="space-y-3">
             {loadingMySessions ? (
               <div className="text-sm text-gray-500">Cargando mis tutorías...</div>
-            ) : mySessions.length === 0 ? (
+            ) : visibleMySessions.length === 0 ? (
               <div className="text-sm text-gray-500">No hay tutorías confirmadas.</div>
             ) : (
-              mySessions.map((s) => (
+              visibleMySessions.map((s) => (
                 <div key={s._id || s.id} className="flex items-center justify-between p-3 border rounded">
                   <div>
                     <div className="font-semibold">{s.alumno || (s.estudiante && (s.estudiante.name || s.estudiante.username)) || 'Estudiante'}</div>
