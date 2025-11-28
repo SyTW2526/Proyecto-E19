@@ -20,8 +20,8 @@ const sidebarMenus = {
   tutorias: [
     { id: 'reservar', label: 'Reservar tutoría', icon: 'calendar' },
     { id: 'mis-tutorias', label: 'Mis tutorías', icon: 'book' },
-    { id: 'historial', label: 'Historial', icon: 'users' },
-    { id: 'profesores', label: 'Profesores favoritos', icon: 'users' },
+    { id: 'historial', label: 'Calendario de tutorías', icon: 'users' },
+    { id: 'profesores', label: 'Solicitudes de reserva', icon: 'users' },
   ],
   espacios: [
     { id: 'buscar', label: 'Buscar espacio', icon: 'pin' },

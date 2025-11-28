@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Icon from '../components/Icon';
 
 function TutoriasAlumno({ menu, activeSubsection, user }) {
@@ -225,8 +225,241 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
     openReserve(prof);
   };
 
+  // -----------------------
+  // Historial (calendario) para el alumno actual
+  // -----------------------
+  const startOfWeek = (date) => {
+    const d = new Date(date);
+    const day = (d.getDay() + 6) % 7; // lunes = 0
+    d.setDate(d.getDate() - day);
+    d.setHours(0,0,0,0);
+    return d;
+  };
+  const endOfWeek = (start) => {
+    const d = new Date(start);
+    d.setDate(d.getDate() + 6);
+    d.setHours(23,59,59,999);
+    return d;
+  };
+
+  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
+  const daysOfWeek = useMemo(() => {
+    return Array.from({ length: 5 }).map((_, i) => {
+      const d = new Date(weekStart);
+      d.setDate(weekStart.getDate() + i);
+      return d;
+    });
+  }, [weekStart]);
+
+  const [historial, setHistorial] = useState([]);
+  const [loadingHistorial, setLoadingHistorial] = useState(false);
+  const [selectedSession, setSelectedSession] = useState(null);
+
+  const personLabel = (p) => {
+    if (!p) return '';
+    if (typeof p === 'string') return p;
+    return p.username || p.email || p.name || p.fullName || String(p._id || '');
+  };
+
+  // fetch historial para este estudiante en la semana actual
+  useEffect(() => {
+    if (!activeSubsection || String(activeSubsection).toLowerCase() !== 'historial') return;
+    let cancelled = false;
+    const load = async () => {
+      setLoadingHistorial(true);
+      try {
+        const uid = user && (user._id || user.id);
+        if (!uid) {
+          setHistorial([]);
+          setLoadingHistorial(false);
+          return;
+        }
+        const startISO = weekStart.toISOString();
+        const endISO = endOfWeek(weekStart).toISOString();
+        let res = await fetchApi(`/api/tutorias?estudiante=${encodeURIComponent(uid)}&inicio=${encodeURIComponent(startISO)}&fin=${encodeURIComponent(endISO)}`);
+        if (!res.ok) {
+          // fallback a endpoint reservas por alumno si existe
+          res = await fetchApi(`/api/horarios/reservas/alumno/${encodeURIComponent(uid)}`);
+        }
+        if (!res.ok) throw new Error('No se pudo cargar historial');
+        const data = await res.json();
+        if (!cancelled) setHistorial(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Error cargando historial alumno', err);
+        if (!cancelled) setHistorial([]);
+      } finally {
+        if (!cancelled) setLoadingHistorial(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [activeSubsection, weekStart, user]);
+
+  // normalizar historial a sesiones con startDate/endDate/title/place
+  const parsedHistorial = useMemo(() => {
+    return (historial || []).map((s) => {
+      const start = s.fechaInicio ? new Date(s.fechaInicio) : s.datetime ? new Date(s.datetime) : null;
+      const end = s.fechaFin ? new Date(s.fechaFin) : (s.fechaInicio ? new Date(new Date(s.fechaInicio).getTime() + 30*60000) : null);
+      const titulo = s.tema || s.title || s.descripcion || personLabel(s.profesor) || 'Tutoría';
+      const lugar = s.lugar || s.location || '';
+      return { ...s, startDate: start, endDate: end, date: start, title: titulo, place: lugar };
+    }).filter(s => s.startDate);
+  }, [historial]);
+
+  // layout constants (como en profesor)
+  const dayStartHour = 8;
+  const dayEndHour = 18;
+  const hourHeight = 56;
+  const totalHours = dayEndHour - dayStartHour;
+  const headerHeight = 40;
+  const timelineHeight = totalHours * hourHeight;
+
+  const sessionsByDay = useMemo(() => {
+    const map = {};
+    daysOfWeek.forEach((d) => { map[d.toDateString()] = []; });
+    (parsedHistorial || []).forEach((s) => {
+      const key = (s.date || s.startDate || new Date()).toDateString();
+      if (map[key]) map[key].push(s);
+    });
+    Object.keys(map).forEach(k => {
+      map[k].sort((a,b) => new Date(a.startDate) - new Date(b.startDate));
+    });
+    return map;
+  }, [parsedHistorial, daysOfWeek]);
+
+  const prevWeek = () => { const d = new Date(weekStart); d.setDate(d.getDate() - 7); setWeekStart(startOfWeek(d)); };
+  const nextWeek = () => { const d = new Date(weekStart); d.setDate(d.getDate() + 7); setWeekStart(startOfWeek(d)); };
+
+  const openSession = (s) => setSelectedSession(s);
+  const closeSession = () => setSelectedSession(null);
+
+  // -----------------------
+  // fin historial
+  // -----------------------
+
   return (
     <div className="bg-white rounded-lg p-4 sm:p-6 lg:p-8 shadow-sm">
+      {/* Vista HISTORIAL para alumno */}
+      {activeSubsection === 'historial' ? (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <button onClick={prevWeek} className="px-3 py-1 bg-violet-50 text-violet-600 rounded border border-violet-100">«</button>
+              <div className="text-sm text-gray-600">
+                {daysOfWeek && daysOfWeek[0] ? daysOfWeek[0].toLocaleDateString() : ''} - {daysOfWeek && daysOfWeek[Math.min(4, daysOfWeek.length-1)] ? daysOfWeek[Math.min(4, daysOfWeek.length-1)].toLocaleDateString() : ''}
+              </div>
+              <button onClick={nextWeek} className="px-3 py-1 bg-violet-50 text-violet-600 rounded border border-violet-100">»</button>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold">Historial de tutorías</h3>
+            </div>
+          </div>
+
+          <div className="border rounded overflow-hidden shadow-sm">
+            <div className="flex">
+              <div className="w-20 border-r border-violet-600 bg-violet-700" style={{ height: headerHeight }} />
+              <div className="flex-1 grid grid-cols-5">
+                {daysOfWeek.map((day) => (
+                  <div key={day.toDateString()} style={{ height: headerHeight }} className="flex items-center justify-center text-sm font-semibold text-white bg-violet-700 border-b border-violet-600">
+                    <div className="truncate">{day.toLocaleDateString(undefined, { weekday: 'short' }).toUpperCase()} {day.getDate()}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ height: timelineHeight }} className="flex overflow-y-auto relative">
+              <div className="w-20 bg-violet-700 border-r border-violet-600">
+                {Array.from({ length: totalHours }).map((_, idx) => {
+                  const h = dayStartHour + idx;
+                  return (
+                    <div key={h} style={{ height: hourHeight }} className="text-xs text-right flex items-center justify-end pr-3 border-b border-violet-600 text-white">
+                      {`${String(h).padStart(2, '0')}:00`}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex-1 grid grid-cols-5" style={{ minWidth: 0 }}>
+                {daysOfWeek.map((day) => {
+                  const key = day.toDateString();
+                  const items = sessionsByDay[key] || [];
+                  return (
+                    <div key={key} className="relative border-l border-violet-600" style={{ height: timelineHeight }}>
+                      {Array.from({ length: totalHours }).map((_, i) => (
+                        <div key={i} style={{ height: hourHeight }} className="border-b border-dashed border-violet-600/30"></div>
+                      ))}
+
+                      {items.map((s) => {
+                        const start = new Date(s.startDate);
+                        const end = s.endDate ? new Date(s.endDate) : new Date(start.getTime() + 30*60000);
+                        const minutesFromStart = (start.getHours() + start.getMinutes()/60 - dayStartHour) * hourHeight;
+                        const durationHours = Math.max((end - start)/3600000, 0.25);
+                        const blockHeight = Math.max(40, durationHours * hourHeight);
+                        const estado = (s.estado || s.status || '').toString().toLowerCase();
+                        const isConfirmada = estado === 'confirmada' || estado === 'confirmed' || estado === 'confirmado';
+                        const isPendiente = estado === 'pendiente' || estado === 'pending';
+                        const gradientClass = isConfirmada ? 'from-green-600 to-green-400' : isPendiente ? 'from-yellow-600 to-violet-400' : 'from-violet-800 to-yellow-600';
+                        const leftBarClass = isConfirmada ? 'bg-green-300' : isPendiente ? 'bg-yellow-300' : 'bg-white/30';
+
+                        return (
+                          <div
+                            key={s._id || s.id || `${s.startDate}-${s.title}`}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => openSession(s)}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openSession(s); }}
+                            className="absolute left-3 right-3 rounded-lg shadow-lg cursor-pointer"
+                            style={{ top: `${Math.max(0, minutesFromStart)}px`, height: `${blockHeight}px`, overflow: 'hidden' }}
+                            title={`${s.title || 'Tutoría'}${s.modalidad ? ' — ' + s.modalidad : ''}`}
+                          >
+                            <div className="h-full flex">
+                              <div className={`w-1 ${leftBarClass} rounded-l-md`} />
+                              <div className={`flex-1 bg-gradient-to-r ${gradientClass} text-white p-2 rounded-r-lg`}>
+                                <div className="text-sm font-semibold leading-tight truncate">{s.title || 'Tutoría'}</div>
+                                <div className="text-xs leading-tight">{(start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}))}{end ? ` - ${end.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}` : ''}</div>
+                                <div className="text-xs opacity-90 mt-1 truncate">{s.modalidad || ''}</div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* modal detalle */}
+          {selectedSession && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/20" onClick={closeSession} />
+              <div className="relative z-10 w-full max-w-lg mx-4 bg-white rounded-lg shadow-xl overflow-auto max-h-[80vh]">
+                <div className="flex items-start justify-between p-4 border-b">
+                  <div>
+                    <h3 className="text-lg font-semibold">{selectedSession.title || selectedSession.tema || 'Tutoría'}</h3>
+                    <div className="text-xs text-gray-500">{selectedSession.profesor ? personLabel(selectedSession.profesor) : ''}</div>
+                  </div>
+                  <button onClick={closeSession} className="text-gray-500 hover:text-gray-700 ml-4">Cerrar ✕</button>
+                </div>
+                <div className="p-4 space-y-3">
+                  <div className="text-sm text-gray-700"><strong>Hora:</strong> {(new Date(selectedSession.startDate)).toLocaleString()} {selectedSession.endDate ? ` - ${(new Date(selectedSession.endDate)).toLocaleString()}` : ''}</div>
+                  {selectedSession.descripcion && (
+                    <div>
+                      <div className="text-xs text-gray-500">Descripción</div>
+                      <div className="text-sm">{selectedSession.descripcion}</div>
+                    </div>
+                  )}
+                  {selectedSession.modalidad && <div className="text-sm"><strong>Modalidad:</strong> {selectedSession.modalidad}</div>}
+                  {selectedSession.lugar && <div className="text-sm"><strong>Lugar:</strong> {selectedSession.lugar}</div>}
+                  {selectedSession.estado && <div className="text-sm"><strong>Estado:</strong> {selectedSession.estado}</div>}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : null}
+
       <div className="flex flex-col items-start justify-start min-h-[300px] sm:min-h-[400px] lg:min-h-[500px]">
         <div className="text-left w-full">
           {activeSubsection === 'reservar' ? (
@@ -266,11 +499,8 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
                 </div>
               )}
             </div>
-          ) : (
-            <div className="mt-6">
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-md">Reservar tutoría</button>
-            </div>
-          )}
+          ) : null
+          }
         </div>
       </div>
 
