@@ -26,8 +26,8 @@ const sidebarMenus = {
   espacios: [
     { id: 'buscar', label: 'Buscar espacio', icon: 'pin' },
     { id: 'mis-reservas', label: 'Mis reservas', icon: 'calendar' },
-    { id: 'favoritos', label: 'Espacios favoritos', icon: 'pin' },
-    { id: 'historial-espacios', label: 'Historial', icon: 'book' },
+    // { id: 'favoritos', label: 'Espacios favoritos', icon: 'pin' },
+    { id: 'historial-reservas', label: 'Historial', icon: 'book' },
   ],
   calendario: [
     { id: 'mensual', label: 'Vista mensual', icon: 'calendar' },
