@@ -39,7 +39,7 @@ mongoose.set('strictQuery', false);
 const mongooseOptions = {
   maxPoolSize: 10,
   minPoolSize: 2,
-  serverSelectionTimeoutMS: 5000,
+  serverSelectionTimeoutMS: 30000, // 30 segundos para dar tiempo a Docker
   socketTimeoutMS: 45000,
   family: 4
 };
