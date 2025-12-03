@@ -33,9 +33,26 @@ app.use(cookieParser());
 
 app.use(express.static("/app_static"));
 
+// Configuración optimizada de MongoDB
+mongoose.set('strictQuery', false);
+
+const mongooseOptions = {
+  maxPoolSize: 10,
+  minPoolSize: 2,
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+  family: 4
+};
+
 // Conexión a MongoDB
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ Conectado a MongoDB"))
+mongoose.connect(process.env.MONGO_URI, mongooseOptions)
+  .then(() => {
+    console.log("✅ Conectado a MongoDB");
+    // Crear índices si no existen
+    mongoose.connection.db.admin().ping()
+      .then(() => console.log("✅ MongoDB ping exitoso"))
+      .catch(err => console.warn("⚠️ MongoDB ping falló:", err.message));
+  })
   .catch(err => console.error("❌ Error conectando a MongoDB:", err));
 
 // Ruta de prueba

@@ -11,19 +11,31 @@ const RecursoSchema = new Schema({
     required: true 
   },
   capacidad: { type: Number, default: 1 },
-  ubicacion: { type: String }, 
+  ubicacion: { type: String },
+  descripcion: { type: String },
   estaActivo: { type: Boolean, default: true } 
 }, {
   timestamps: true
 });
 
+// Índices para mejorar rendimiento
+RecursoSchema.index({ tipo: 1, estaActivo: 1 });
+RecursoSchema.index({ nombre: 1 });
+
 const ReservaRecursoSchema = new Schema({
   recurso: { type: Schema.Types.ObjectId, ref: "Recurso", required: true },
   usuario: { type: Schema.Types.ObjectId, ref: "User", required: true },
-  fechaReserva: { type: Date, required: true }
+  fechaReserva: { type: Date, required: true },
+  estado: { type: String, enum: ["confirmada", "cancelada", "completada"], default: "confirmada" },
+  notas: { type: String }
 }, {
   timestamps: true
 });
+
+// Índices compuestos para queries frecuentes
+ReservaRecursoSchema.index({ recurso: 1, fechaReserva: 1 });
+ReservaRecursoSchema.index({ usuario: 1, fechaReserva: -1 });
+ReservaRecursoSchema.index({ estado: 1 });
 
 export default model("Recurso", RecursoSchema);
 export const ReservaRecurso = model("ReservaRecurso", ReservaRecursoSchema);
