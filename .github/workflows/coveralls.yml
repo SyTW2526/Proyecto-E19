@@ -1,0 +1,40 @@
+name: Coverage
+
+on:
+  push:
+    branches: [ "main", "feature/jose" ]
+  pull_request:
+    branches: [ "main", "feature/jose" ]
+
+jobs:
+  coverage:
+    name: Test Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Cloning repo
+      uses: actions/checkout@v4
+      
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        
+    - name: Installing server dependencies
+      working-directory: ./server
+      run: npm ci
+      
+    - name: Running tests with coverage
+      working-directory: ./server
+      run: npm run test:coverage
+      env:
+        JWT_SECRET: test-secret-key-for-ci
+        NODE_ENV: test
+        
+    - name: Upload coverage to Coveralls
+      uses: coverallsapp/github-action@v2
+      with:
+        github-token: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        path-to-lcov: ./server/coverage/lcov.info
+        flag-name: server-tests
+        parallel: false
