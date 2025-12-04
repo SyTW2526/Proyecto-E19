@@ -328,22 +328,7 @@ function Perfil({ user }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Nombre de usuario
-                </label>
-                <input
-                  type="text"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                  placeholder="Tu nombre de usuario"
-                  maxLength={50}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Nombre *
+                  Nombre de usuario *
                 </label>
                 <input
                   type="text"
@@ -351,7 +336,7 @@ function Perfil({ user }) {
                   value={formData.name}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                  placeholder="Tu nombre"
+                  placeholder="Tu nombre de usuario"
                   maxLength={100}
                   required
                 />
@@ -464,13 +449,6 @@ function Perfil({ user }) {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {userData?.name && (
-                <div>
-                  <div className="text-sm font-semibold text-gray-500 mb-1">Nombre</div>
-                  <div className="text-gray-800">{userData.name}</div>
-                </div>
-              )}
-
               {userData?.fullName && (
                 <div>
                   <div className="text-sm font-semibold text-gray-500 mb-1">Nombre completo</div>
