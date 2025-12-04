@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import DashboardNavbar from './components/DashboardNavbar';
 import Home from './pages/Home';
@@ -12,9 +12,42 @@ import axios from 'axios';
 
 axios.defaults.withCredentials = true;
 
+function AppContent({ user, setUser, loading }) {
+  const location = useLocation();
+  
+  // Rutas donde NO queremos mostrar el navbar
+  const hideNavbarRoutes = ['/login', '/register'];
+  const shouldShowNavbar = !hideNavbarRoutes.includes(location.pathname);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="text-lg text-gray-600">Cargando...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-white">
+      {shouldShowNavbar && (
+        user ? <DashboardNavbar user={user} setUser={setUser} /> : <Navbar user={user} setUser={setUser} />
+      )}
+      <Routes>
+        <Route path="/" element={<Home setUser={setUser} />} />
+        <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login setUser={setUser} />} />
+        <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register setUser={setUser} />} />
+        <Route path="/dashboard" element={user ? <Dashboard user={user} /> : <Navigate to="/login" />} />
+        <Route path="/perfil" element={user ? <Perfil user={user} /> : <Navigate to="/login" />} />
+        <Route path="*" element={<Navigate to={user ? "/dashboard" : "/"} />} />
+      </Routes>
+    </div>
+  );
+}
+
 function App() {
   const [output, setOutput] = useState('')
-  // Creamos user pero no lo usamos aún
   const [user, setUser] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -43,30 +76,10 @@ function App() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-center">
-          <div className="text-lg text-gray-600">Cargando...</div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <Router>
       <NavigationProvider>
-        <div className="min-h-screen bg-white">
-          {user ? <DashboardNavbar user={user} setUser={setUser} /> : <Navbar user={user} setUser={setUser} />}
-          <Routes>
-            <Route path="/" element={<Home setUser={setUser} />} />
-            <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login setUser={setUser} />} />
-            <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register setUser={setUser} />} />
-            <Route path="/dashboard" element={user ? <Dashboard user={user} /> : <Navigate to="/login" />} />
-            <Route path="/perfil" element={user ? <Perfil user={user} /> : <Navigate to="/login" />} />
-            <Route path="*" element={<Navigate to={user ? "/dashboard" : "/"} />} />
-          </Routes>
-        </div>
+        <AppContent user={user} setUser={setUser} loading={loading} />
       </NavigationProvider>
     </Router>
   );

@@ -552,7 +552,7 @@ function Perfil({ user }) {
                 {!showPasswordChange && (
                   <button
                     onClick={() => setShowPasswordChange(true)}
-                    className="px-4 py-2 bg-violet-100 hover:bg-violet-200 text-violet-700 rounded-lg font-medium transition-colors flex items-center gap-2 text-sm"
+                    className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 text-sm"
                   >
                     <Icon name="cog" className="w-4 h-4" />
                     Cambiar contraseña
