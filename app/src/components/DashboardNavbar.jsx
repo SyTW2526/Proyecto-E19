@@ -15,6 +15,15 @@ const DashboardNavbar = ({ user, setUser }) => {
     navigate("/");
   };
 
+  // Función auxiliar para navegar y actualizar el contexto si es necesario
+  const handleNavClick = (sectionName, path) => {
+    // 1. Navega a la URL principal de la sección
+    navigate(path);
+    // 2. Opcionalmente, llama a navigateToSection para mantener el estado interno
+    //    del dashboard sincronizado al regresar (aunque al cambiar de URL, el Dashboard se montará de nuevo)
+    navigateToSection(sectionName);
+  }
+
   // Cerrar dropdown al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -59,7 +68,7 @@ const DashboardNavbar = ({ user, setUser }) => {
       <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 xl:gap-8">
         <div className="hidden lg:flex items-center gap-3 xl:gap-8">
           <button 
-            onClick={() => navigateToSection('dashboard')}
+            onClick={() => handleNavClick('dashboard', '/dashboard')}
             className={`text-xs lg:text-sm xl:text-base font-semibold transition-colors py-2 px-1.5 lg:px-2 ${
               currentSection === 'dashboard' 
                 ? 'text-[#7024BB] border-b-2 border-[#7024BB]' 
@@ -69,7 +78,7 @@ const DashboardNavbar = ({ user, setUser }) => {
             Dashboard
           </button>
           <button 
-            onClick={() => navigateToSection('tutorias')}
+            onClick={() => handleNavClick('tutorias', '/tutorias')}
             className={`text-xs lg:text-sm xl:text-base font-semibold transition-colors py-2 px-1.5 lg:px-2 ${
               currentSection === 'tutorias' 
                 ? 'text-[#7024BB] border-b-2 border-[#7024BB]' 
@@ -79,7 +88,7 @@ const DashboardNavbar = ({ user, setUser }) => {
             Tutorías
           </button>
           <button 
-            onClick={() => navigateToSection('espacios')}
+            onClick={() => handleNavClick('espacios', '/espacios')}
             className={`text-xs lg:text-sm xl:text-base font-semibold transition-colors py-2 px-1.5 lg:px-2 ${
               currentSection === 'espacios' 
                 ? 'text-[#7024BB] border-b-2 border-[#7024BB]' 
@@ -89,7 +98,7 @@ const DashboardNavbar = ({ user, setUser }) => {
             Reserva de espacios
           </button>
           <button 
-            onClick={() => navigateToSection('calendario')}
+            onClick={() => handleNavClick('calendario', '/calendario')}
             className={`text-xs lg:text-sm xl:text-base font-semibold transition-colors py-2 px-1.5 lg:px-2 ${
               currentSection === 'calendario' 
                 ? 'text-[#7024BB] border-b-2 border-[#7024BB]' 
