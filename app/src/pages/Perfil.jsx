@@ -17,6 +17,17 @@ function Perfil({ user }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
+  // Estado para cambio de contraseña
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [savingPassword, setSavingPassword] = useState(false);
+
   const API_BASE =
     (typeof window !== 'undefined' && (window.__API_BASE__ || window.localStorage.getItem('API_BASE'))) ||
     (typeof process !== 'undefined' && (process.env && (process.env.REACT_APP_API_BASE || process.env.VITE_API_BASE))) ||
@@ -79,6 +90,13 @@ function Perfil({ user }) {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handlePasswordInputChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordForm(prev => ({ ...prev, [name]: value }));
+    setPasswordError('');
+    setPasswordSuccess('');
+  };
+
   const handleSave = async () => {
     if (!user || !(user._id || user.id)) {
       setError('Usuario no identificado');
@@ -112,6 +130,69 @@ function Perfil({ user }) {
     }
   };
 
+  const handlePasswordChange = async () => {
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    // Validaciones
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      setPasswordError('Todos los campos son obligatorios');
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordError('La nueva contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError('Las contraseñas nuevas no coinciden');
+      return;
+    }
+
+    if (passwordForm.currentPassword === passwordForm.newPassword) {
+      setPasswordError('La nueva contraseña debe ser diferente a la actual');
+      return;
+    }
+
+    setSavingPassword(true);
+
+    try {
+      const userId = user._id || user.id;
+      const res = await fetchApi(`/api/usuarios/${encodeURIComponent(userId)}/cambiar-password`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword
+        })
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || body?.message || 'No se pudo cambiar la contraseña');
+      }
+
+      setPasswordSuccess('Contraseña actualizada correctamente');
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+      
+      // Ocultar el formulario después de 2 segundos
+      setTimeout(() => {
+        setShowPasswordChange(false);
+        setPasswordSuccess('');
+      }, 2000);
+
+    } catch (err) {
+      console.error('Error cambiando contraseña:', err);
+      setPasswordError(err.message || 'Error al cambiar la contraseña');
+    } finally {
+      setSavingPassword(false);
+    }
+  };
+
   const handleCancel = () => {
     setFormData({
       name: userData?.name || '',
@@ -124,6 +205,17 @@ function Perfil({ user }) {
     });
     setEditing(false);
     setError(null);
+  };
+
+  const handleCancelPasswordChange = () => {
+    setPasswordForm({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    });
+    setPasswordError('');
+    setPasswordSuccess('');
+    setShowPasswordChange(false);
   };
 
   const getInitials = () => {
@@ -451,6 +543,108 @@ function Perfil({ user }) {
                   </span>
                 </div>
               </div>
+            </div>
+
+            {/* Sección de cambio de contraseña */}
+            <div className="pt-6 border-t border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">Seguridad</h3>
+                {!showPasswordChange && (
+                  <button
+                    onClick={() => setShowPasswordChange(true)}
+                    className="px-4 py-2 bg-violet-100 hover:bg-violet-200 text-violet-700 rounded-lg font-medium transition-colors flex items-center gap-2 text-sm"
+                  >
+                    <Icon name="cog" className="w-4 h-4" />
+                    Cambiar contraseña
+                  </button>
+                )}
+              </div>
+
+              {showPasswordChange && (
+                <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                  <h4 className="font-semibold text-gray-800 mb-4">Cambiar contraseña</h4>
+                  
+                  {passwordError && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
+                      <Icon name="x-circle" className="w-5 h-5 flex-shrink-0" />
+                      <span>{passwordError}</span>
+                    </div>
+                  )}
+
+                  {passwordSuccess && (
+                    <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
+                      <Icon name="check-circle" className="w-5 h-5 flex-shrink-0" />
+                      <span>{passwordSuccess}</span>
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Contraseña actual *
+                      </label>
+                      <input
+                        type="password"
+                        name="currentPassword"
+                        value={passwordForm.currentPassword}
+                        onChange={handlePasswordInputChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                        placeholder="Ingresa tu contraseña actual"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Nueva contraseña *
+                      </label>
+                      <input
+                        type="password"
+                        name="newPassword"
+                        value={passwordForm.newPassword}
+                        onChange={handlePasswordInputChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                        placeholder="Mínimo 6 caracteres"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Confirmar nueva contraseña *
+                      </label>
+                      <input
+                        type="password"
+                        name="confirmPassword"
+                        value={passwordForm.confirmPassword}
+                        onChange={handlePasswordInputChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                        placeholder="Repite la nueva contraseña"
+                        required
+                      />
+                    </div>
+
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        onClick={handlePasswordChange}
+                        disabled={savingPassword}
+                        className="px-6 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        <Icon name="save" className="w-4 h-4" />
+                        {savingPassword ? 'Guardando...' : 'Actualizar contraseña'}
+                      </button>
+                      <button
+                        onClick={handleCancelPasswordChange}
+                        disabled={savingPassword}
+                        className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors flex items-center gap-2"
+                      >
+                        <Icon name="x" className="w-4 h-4" />
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
