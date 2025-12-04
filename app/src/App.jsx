@@ -6,6 +6,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import Perfil from './pages/Perfil';
 import { NavigationProvider } from './contexts/NavigationContext';
 import axios from 'axios';
 
@@ -16,7 +17,7 @@ function App() {
   // Creamos user pero no lo usamos aún
   const [user, setUser] = useState(null);
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchUser = async() => {
@@ -44,12 +45,9 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-500 via-pink-500 to-red-500 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-2xl shadow-2xl">
-          <div className="flex items-center space-x-3">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-            <span className="text-xl font-bold text-gray-800">Cargando...</span>
-          </div>
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="text-lg text-gray-600">Cargando...</div>
         </div>
       </div>
     );
@@ -57,17 +55,19 @@ function App() {
 
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<><Navbar user={user} setUser={setUser} /><Home setUser={setUser} /></>} />
-        <Route path="/login" element={<Login setUser={setUser} />} />
-        <Route path="/register" element={<Register setUser={setUser} />} />
-        <Route path="/dashboard" element={
-          <NavigationProvider>
-            <DashboardNavbar user={user} setUser={setUser} />
-            <Dashboard user={user} />
-          </NavigationProvider>
-        } />
-      </Routes>
+      <NavigationProvider>
+        <div className="min-h-screen bg-white">
+          {user ? <DashboardNavbar user={user} setUser={setUser} /> : <Navbar user={user} setUser={setUser} />}
+          <Routes>
+            <Route path="/" element={<Home setUser={setUser} />} />
+            <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login setUser={setUser} />} />
+            <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register setUser={setUser} />} />
+            <Route path="/dashboard" element={user ? <Dashboard user={user} /> : <Navigate to="/login" />} />
+            <Route path="/perfil" element={user ? <Perfil user={user} /> : <Navigate to="/login" />} />
+            <Route path="*" element={<Navigate to={user ? "/dashboard" : "/"} />} />
+          </Routes>
+        </div>
+      </NavigationProvider>
     </Router>
   );
 }
