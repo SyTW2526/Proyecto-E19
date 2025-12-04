@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { useNavigation } from '../contexts/NavigationContext';
 
 const DashboardNavbar = ({ user, setUser }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
   const { currentSection, navigateToSection } = useNavigation();
@@ -42,6 +43,9 @@ const DashboardNavbar = ({ user, setUser }) => {
     return 'U';
   };
 
+  // Determinar si estamos en una ruta especial (como perfil) donde no debe haber botones activos
+  const isSpecialRoute = location.pathname === '/perfil';
+
   return (
     <nav className="fixed top-0 left-0 right-0 bg-white py-2 sm:py-3 lg:py-4 px-3 sm:px-4 lg:pr-8 text-gray-800 flex items-center justify-between z-50">
       {/* Logo y buscador */}
@@ -70,7 +74,7 @@ const DashboardNavbar = ({ user, setUser }) => {
           <button 
             onClick={() => handleNavClick('dashboard', '/dashboard')}
             className={`text-xs lg:text-sm xl:text-base font-semibold transition-colors py-2 px-1.5 lg:px-2 ${
-              currentSection === 'dashboard' 
+              !isSpecialRoute && currentSection === 'dashboard' 
                 ? 'text-[#7024BB] border-b-2 border-[#7024BB]' 
                 : 'text-gray-800 hover:text-[#7024BB]'
             }`}
@@ -78,9 +82,9 @@ const DashboardNavbar = ({ user, setUser }) => {
             Dashboard
           </button>
           <button 
-            onClick={() => handleNavClick('tutorias', '/tutorias')}
+            onClick={() => handleNavClick('tutorias', '/dashboard')}
             className={`text-xs lg:text-sm xl:text-base font-semibold transition-colors py-2 px-1.5 lg:px-2 ${
-              currentSection === 'tutorias' 
+              !isSpecialRoute && currentSection === 'tutorias' 
                 ? 'text-[#7024BB] border-b-2 border-[#7024BB]' 
                 : 'text-gray-800 hover:text-[#7024BB]'
             }`}
@@ -88,9 +92,9 @@ const DashboardNavbar = ({ user, setUser }) => {
             Tutorías
           </button>
           <button 
-            onClick={() => handleNavClick('espacios', '/espacios')}
+            onClick={() => handleNavClick('espacios', '/dashboard')}
             className={`text-xs lg:text-sm xl:text-base font-semibold transition-colors py-2 px-1.5 lg:px-2 ${
-              currentSection === 'espacios' 
+              !isSpecialRoute && currentSection === 'espacios' 
                 ? 'text-[#7024BB] border-b-2 border-[#7024BB]' 
                 : 'text-gray-800 hover:text-[#7024BB]'
             }`}
@@ -98,9 +102,9 @@ const DashboardNavbar = ({ user, setUser }) => {
             Reserva de espacios
           </button>
           <button 
-            onClick={() => handleNavClick('calendario', '/calendario')}
+            onClick={() => handleNavClick('calendario', '/dashboard')}
             className={`text-xs lg:text-sm xl:text-base font-semibold transition-colors py-2 px-1.5 lg:px-2 ${
-              currentSection === 'calendario' 
+              !isSpecialRoute && currentSection === 'calendario' 
                 ? 'text-[#7024BB] border-b-2 border-[#7024BB]' 
                 : 'text-gray-800 hover:text-[#7024BB]'
             }`}
