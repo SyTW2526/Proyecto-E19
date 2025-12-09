@@ -40,7 +40,7 @@ function AppContent({ user, setUser, loading }) {
         <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register setUser={setUser} />} />
         <Route path="/dashboard" element={user ? <Dashboard user={user} /> : <Navigate to="/login" />} />
         <Route path="/perfil" element={user ? <Perfil user={user} /> : <Navigate to="/login" />} />
-        <Route path="*" element={<Navigate to={user ? "/dashboard" : "/"} />} />
+        <Route path="*" element={<Navigate to={user ? "/dashboard" : "/login"} />} />
       </Routes>
     </div>
   );
