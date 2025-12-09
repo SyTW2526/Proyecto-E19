@@ -646,84 +646,231 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
   });
 
   return (
-    <div className="bg-white rounded-lg p-4 sm:p-6 lg:p-8 shadow-sm">
-      <div className="min-h-[300px]">
-        <div className="flex items-center justify-between mb-4">
-
-          {/* Controles de semana (solo en historial) */}
-          {tab === 'historial' ? (
-            <div className="flex items-center gap-2">
-              <button onClick={prevWeek} className="px-3 py-1 bg-violet-50 text-violet-600 rounded border border-violet-100">«</button>
-              <div className="text-sm text-gray-600">
-                {daysOfWeek && daysOfWeek[0] ? daysOfWeek[0].toLocaleDateString() : ''} - {daysOfWeek && daysOfWeek[Math.min(4, daysOfWeek.length - 1)] ? daysOfWeek[Math.min(4, daysOfWeek.length - 1)].toLocaleDateString() : ''}
-              </div>
-              <button onClick={nextWeek} className="px-3 py-1 bg-violet-50 text-violet-600 rounded border border-violet-100">»</button>
-            </div>
-          ) : null}
-
-          {/* Botón "Nuevo horario" en el header solo para la pestaña reservar */}
-          {tab === 'reservar' && (
-            <div className="ml-4">
-              <button
-                onClick={openCreateModal}
-                className="px-3 py-1 bg-violet-600 text-white rounded"
-                aria-label="Nuevo horario"
-              >
-                Nuevo horario
-              </button>
-            </div>
-          )}
+    <div className="mt-4">
+      {/* Controles de semana (solo en historial) */}
+      {tab === 'historial' && (
+        <div className="flex items-center gap-2 mb-4">
+          <button onClick={prevWeek} className="px-3 py-1 bg-violet-50 text-violet-600 rounded border border-violet-100">«</button>
+          <div className="text-sm text-gray-600">
+            {daysOfWeek && daysOfWeek[0] ? daysOfWeek[0].toLocaleDateString() : ''} - {daysOfWeek && daysOfWeek[Math.min(4, daysOfWeek.length - 1)] ? daysOfWeek[Math.min(4, daysOfWeek.length - 1)].toLocaleDateString() : ''}
+          </div>
+          <button onClick={nextWeek} className="px-3 py-1 bg-violet-50 text-violet-600 rounded border border-violet-100">»</button>
         </div>
+      )}
 
-        {/* Gestión de tutorías */}
+      {/* Botón "Nuevo horario" alineado a la derecha para la pestaña reservar */}
+      {tab === 'reservar' && (
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={openCreateModal}
+            className="px-4 py-2 bg-[#7024BB] hover:bg-[#5a1d99] text-white rounded-xl font-medium transition-all flex items-center gap-2"
+            aria-label="Nuevo horario"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Nuevo horario
+          </button>
+        </div>
+      )}
+
+        {/* Gestión de tutorías (solicitudes pendientes) */}
         {tab === 'profesores' && (
-          <div className="space-y-3">
+          <div>
             {loadingPending ? (
-              <div className="text-sm text-gray-500">Cargando solicitudes...</div>
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#7024BB]"></div>
+              </div>
             ) : visiblePendingRequests.length === 0 ? (
-              <div className="text-sm text-gray-500">No hay solicitudes pendientes.</div>
+              <div className="text-center py-16">
+                <svg className="w-20 h-20 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+                <p className="text-gray-500 text-lg">No hay solicitudes pendientes</p>
+                <p className="text-gray-400 text-sm mt-2">Las solicitudes de tutoría de tus estudiantes aparecerán aquí</p>
+              </div>
             ) : (
-              visiblePendingRequests.map((r) => (
-                <div key={r._id || r.id} className="bg-white rounded-lg p-3 border shadow-sm flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="font-semibold">
-                      {(r.estudiante && (r.estudiante.name || r.estudiante.username)) || r.alumno || 'Estudiante'}
+              <div className="space-y-4">
+                {visiblePendingRequests.map((r) => {
+                  const fechaInicio = r.fechaInicio ? new Date(r.fechaInicio) : null;
+                  const estudianteNombre = (r.estudiante && (r.estudiante.name || r.estudiante.username)) || r.alumno || 'Estudiante';
+                  
+                  return (
+                    <div key={r._id || r.id} className="p-5 rounded-xl bg-gray-50 hover:ring-2 hover:ring-yellow-400 transition-all">
+                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                        {/* Info principal */}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className="font-semibold text-gray-900 text-lg">{r.tema || r.title || 'Tutoría solicitada'}</h4>
+                            <span className="px-2.5 py-0.5 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-full">
+                              Pendiente
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center gap-1.5 text-sm text-gray-600 mb-1">
+                            <svg className="w-4 h-4 text-[#7024BB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            <span className="font-medium">{estudianteNombre}</span>
+                          </div>
+                          
+                          {fechaInicio && (
+                            <div className="flex items-center gap-4 text-sm text-gray-600">
+                              <div className="flex items-center gap-1.5">
+                                <svg className="w-4 h-4 text-[#7024BB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <span>{fechaInicio.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <svg className="w-4 h-4 text-[#7024BB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>{fechaInicio.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Botones de acción */}
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <button 
+                            onClick={() => acceptRequest(r._id || r.id)} 
+                            className="px-4 py-2 text-sm font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all flex items-center justify-center gap-1.5"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Aceptar
+                          </button>
+                          <button 
+                            onClick={() => reprogramRequest(r._id || r.id)} 
+                            className="px-4 py-2 text-sm font-medium bg-white hover:bg-yellow-50 text-yellow-600 border border-yellow-400 rounded-lg transition-all flex items-center justify-center gap-1.5"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            Reprogramar
+                          </button>
+                          <button 
+                            onClick={() => cancelRequest(r._id || r.id)} 
+                            className="px-4 py-2 text-sm font-medium bg-white hover:bg-red-50 text-red-600 border border-red-300 rounded-lg transition-all flex items-center justify-center gap-1.5"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500">{r.tema || r.title || 'Tutoria solicitada'}</div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      {r.fechaInicio ? new Date(r.fechaInicio).toLocaleString() : (r.fecha || '')}
-                    </div>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-2 ml-4">
-                    <button onClick={() => acceptRequest(r._id || r.id)} className="px-3 py-1 bg-green-500 text-white rounded">Aceptar</button>
-                    <button onClick={() => cancelRequest(r._id || r.id)} className="px-3 py-1 bg-red-500 text-white rounded">Cancelar</button>
-                    <button onClick={() => reprogramRequest(r._id || r.id)} className="px-3 py-1 bg-yellow-400 text-white rounded">Reprogramar</button>
-                  </div>
-                </div>
-              ))
+                  );
+                })}
+              </div>
             )}
           </div>
         )}
 
         {/* Mis tutorías (solo CONFIRMADAS del profesor actual) */}
         {tab === 'mis-tutorias' && (
-          <div className="space-y-3">
+          <div>
             {loadingMySessions ? (
-              <div className="text-sm text-gray-500">Cargando mis tutorías...</div>
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#7024BB]"></div>
+              </div>
             ) : visibleMySessions.length === 0 ? (
-              <div className="text-sm text-gray-500">No hay tutorías confirmadas.</div>
+              <div className="text-center py-16">
+                <svg className="w-20 h-20 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <p className="text-gray-500 text-lg">No hay tutorías confirmadas</p>
+                <p className="text-gray-400 text-sm mt-2">Tus tutorías confirmadas aparecerán aquí</p>
+              </div>
             ) : (
-              visibleMySessions.map((s) => (
-                <div key={s._id || s.id} className="flex items-center justify-between p-3 border rounded">
-                  <div>
-                    <div className="font-semibold">{s.alumno || (s.estudiante && (s.estudiante.name || s.estudiante.username)) || 'Estudiante'}</div>
-                    <div className="text-xs text-gray-500">
-                      {(s.tema || s.title || '')}{' '}{s.fechaInicio ? `· ${new Date(s.fechaInicio).toLocaleString()}` : (s.fecha ? `· ${s.fecha}` : '')}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {visibleMySessions.map((s) => {
+                  const fechaInicio = s.fechaInicio ? new Date(s.fechaInicio) : null;
+                  const estudianteNombre = s.alumno || (s.estudiante && (s.estudiante.name || s.estudiante.username)) || 'Estudiante';
+                  const tema = s.tema || s.title || 'Tutoría';
+                  const isPast = fechaInicio && fechaInicio < new Date();
+                  
+                  return (
+                    <div key={s._id || s.id} className="p-5 rounded-xl bg-gray-50 hover:ring-2 hover:ring-[#7024BB] transition-all cursor-pointer">
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900 text-lg">{tema}</h3>
+                          <div className="flex items-center gap-1.5 text-sm text-gray-600 mt-1">
+                            <svg className="w-4 h-4 text-[#7024BB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            <span className="font-medium">{estudianteNombre}</span>
+                          </div>
+                        </div>
+                        <span className={`text-xs px-3 py-1.5 rounded-full font-medium flex items-center gap-1 ${
+                          isPast
+                            ? 'bg-gray-50 text-gray-600 border border-gray-200'
+                            : 'bg-green-50 text-green-700 border border-green-200'
+                        }`}>
+                          {isPast ? (
+                            <>
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              Pasada
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                              Confirmada
+                            </>
+                          )}
+                        </span>
+                      </div>
+
+                      {fechaInicio && (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-sm text-gray-700">
+                            <svg className="w-4 h-4 text-[#7024BB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span>{fechaInicio.toLocaleDateString('es-ES', { 
+                              weekday: 'long', 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric' 
+                            })}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-gray-700">
+                            <svg className="w-4 h-4 text-[#7024BB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>{fechaInicio.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
+                          </div>
+                          {s.modalidad && (
+                            <div className="flex items-center gap-2 text-sm text-gray-700">
+                              <svg className="w-4 h-4 text-[#7024BB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={s.modalidad === 'online' ? 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' : 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4'} />
+                              </svg>
+                              <span className="capitalize">{s.modalidad}</span>
+                            </div>
+                          )}
+                          {s.lugar && (
+                            <div className="flex items-center gap-2 text-sm text-gray-700">
+                              <svg className="w-4 h-4 text-[#7024BB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                              <span>{s.lugar}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <div className="text-xs text-gray-600">Ver detalles</div>
-                </div>
-              ))
+                  );
+                })}
+              </div>
             )}
           </div>
         )}
@@ -896,201 +1043,318 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
           </>
         )}
 
-        {/* Solicitudes de tutoría */}
+        {/* Gestión de horarios */}
         {tab === 'reservar' && sesiones && (
-          <>
-            <div className="mb-3">
-              <h3 className="text-lg font-semibold">Solicitudes / Crear horario</h3>
-            </div>
-
-            <div className="space-y-4">
-              {reservasGrouped.length === 0 ? (
-                <div className="text-sm text-gray-500">No hay reservas creadas.</div>
-              ) : (
-                reservasGrouped.map((g) => (
-                  <div key={g.asignatura} className="bg-gray-50 rounded-xl border border-gray-200 p-4 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-md font-semibold text-gray-800">{g.asignatura}</div>
-                        <div className="text-xs text-gray-500">{g.items.length} {g.items.length === 1 ? 'sesión' : 'sesiones'}</div>
-                      </div>
-                      <div className="text-sm text-gray-600"> </div>
-                    </div>
-
-                    <div className="mt-3 space-y-2">
-                      {g.items.map((s) => {
-                        const id = s._id || s.id;
-                        const isEditing = editingId === id;
-                        return (
-                          <div
-                            key={id}
-                            className="flex items-center justify-between bg-gray-200 border border-gray-200 rounded-md p-2 shadow-sm"
-                          >
-                            {isEditing ? (
-                              <div className="flex-1 flex items-center gap-2">
-                                <input
-                                  className="p-1 border rounded w-24"
-                                  value={editValues.horaInicio || ''}
-                                  onChange={(e) => setEditValues((v) => ({ ...v, horaInicio: e.target.value }))}
-                                  placeholder="HH:MM"
-                                />
-                                <span className="text-sm text-gray-600">-</span>
-                                <input
-                                  className="p-1 border rounded w-24"
-                                  value={editValues.horaFin || ''}
-                                  onChange={(e) => setEditValues((v) => ({ ...v, horaFin: e.target.value }))}
-                                  placeholder="HH:MM"
-                                />
-                                <select
-                                  className="p-1 border rounded"
-                                  value={editValues.modalidad || ''}
-                                  onChange={(e) => setEditValues((v) => ({ ...v, modalidad: e.target.value }))}
-                                >
-                                  <option value="">Modalidad</option>
-                                  <option value="presencial">presencial</option>
-                                  <option value="online">online</option>
-                                </select>
-                                <input
-                                  className="p-1 border rounded flex-1"
-                                  value={editValues.lugar || ''}
-                                  onChange={(e) => setEditValues((v) => ({ ...v, lugar: e.target.value }))}
-                                  placeholder="Lugar"
-                                />
-                              </div>
-                            ) : (
-                              <div className="text-sm text-gray-800">
-                                {s.diaSemana ? `${s.diaSemana} ` : ''}{s.horaInicio}{s.horaFin ? ` - ${s.horaFin}` : ''}
-                                {s.modalidad ? <span className="text-xs text-gray-500 ml-2">· {s.modalidad}</span> : null}
-                              </div>
-                            )}
-
-                            <div className="flex items-center gap-2">
-                              {isEditing ? (
-                                <>
-                                  <button
-                                    onClick={() => saveEdit(id)}
-                                    className="text-xs px-2 py-1 bg-violet-600 text-white rounded"
-                                  >
-                                    Guardar
-                                  </button>
-                                  <button
-                                    onClick={cancelEdit}
-                                    className="text-xs px-2 py-1 bg-gray-300 text-gray-800 rounded"
-                                  >
-                                    Cancelar
-                                  </button>
-                                </>
-                              ) : (
-                                <>
-                                  <button
-                                    onClick={() => startEdit(s)}
-                                    className="text-xs px-2 py-1 bg-yellow-400 text-white rounded"
-                                  >
-                                    Editar
-                                  </button>
-                                  <button
-                                    onClick={() => deleteHorario(id)}
-                                    className="text-xs px-2 py-1 bg-red-500 text-white rounded"
-                                  >
-                                    Borrar
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
+          <div className="space-y-4">
+            {reservasGrouped.length === 0 ? (
+              <div className="text-center py-16">
+                <svg className="w-20 h-20 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <p className="text-gray-500 text-lg">No hay horarios creados</p>
+                <p className="text-gray-400 text-sm mt-2">Haz clic en "Nuevo horario" para crear tu primer horario de tutoría</p>
+              </div>
+            ) : (
+              reservasGrouped.map((g) => (
+                <div key={g.asignatura} className="p-6 rounded-xl bg-gray-50">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <div className="text-lg font-semibold text-gray-900">{g.asignatura}</div>
+                      <div className="text-sm text-gray-500 mt-1">{g.items.length} {g.items.length === 1 ? 'horario disponible' : 'horarios disponibles'}</div>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-          </>
+
+                  <div className="space-y-3">
+                    {g.items.map((s) => {
+                      const id = s._id || s.id;
+                      const isEditing = editingId === id;
+                      return (
+                        <div
+                          key={id}
+                          className="flex flex-col sm:flex-row sm:items-center gap-3 bg-white rounded-xl p-4 hover:ring-2 hover:ring-[#7024BB] transition-all"
+                        >
+                          {isEditing ? (
+                            <div className="flex-1 flex flex-wrap items-center gap-3">
+                              <input
+                                className="px-3 py-2 border border-gray-300 rounded-lg w-28 focus:ring-2 focus:ring-[#7024BB] focus:border-transparent"
+                                value={editValues.horaInicio || ''}
+                                onChange={(e) => setEditValues((v) => ({ ...v, horaInicio: e.target.value }))}
+                                placeholder="HH:MM"
+                              />
+                              <span className="text-sm text-gray-600 font-medium">-</span>
+                              <input
+                                className="px-3 py-2 border border-gray-300 rounded-lg w-28 focus:ring-2 focus:ring-[#7024BB] focus:border-transparent"
+                                value={editValues.horaFin || ''}
+                                onChange={(e) => setEditValues((v) => ({ ...v, horaFin: e.target.value }))}
+                                placeholder="HH:MM"
+                              />
+                              <select
+                                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7024BB] focus:border-transparent"
+                                value={editValues.modalidad || ''}
+                                onChange={(e) => setEditValues((v) => ({ ...v, modalidad: e.target.value }))}
+                              >
+                                <option value="">Modalidad</option>
+                                <option value="presencial">Presencial</option>
+                                <option value="online">Online</option>
+                              </select>
+                              <input
+                                className="px-3 py-2 border border-gray-300 rounded-lg flex-1 min-w-[150px] focus:ring-2 focus:ring-[#7024BB] focus:border-transparent"
+                                value={editValues.lugar || ''}
+                                onChange={(e) => setEditValues((v) => ({ ...v, lugar: e.target.value }))}
+                                placeholder="Lugar"
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex-1">
+                              <div className="font-semibold text-gray-900">
+                                {s.diaSemana ? `${s.diaSemana.charAt(0).toUpperCase() + s.diaSemana.slice(1)} ` : ''}{s.horaInicio}{s.horaFin ? ` - ${s.horaFin}` : ''}
+                              </div>
+                              <div className="flex items-center gap-3 mt-1 text-sm text-gray-600">
+                                {s.modalidad && (
+                                  <span className="flex items-center gap-1">
+                                    <svg className="w-4 h-4 text-[#7024BB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={s.modalidad === 'online' ? 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' : 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4'} />
+                                    </svg>
+                                    <span className="capitalize">{s.modalidad}</span>
+                                  </span>
+                                )}
+                                {s.lugar && (
+                                  <span className="flex items-center gap-1">
+                                    <svg className="w-4 h-4 text-[#7024BB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    {s.lugar}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-shrink-0">
+                            {isEditing ? (
+                              <>
+                                <button
+                                  onClick={() => saveEdit(id)}
+                                  className="px-3 py-2 text-sm font-medium bg-[#7024BB] hover:bg-[#5a1d99] text-white rounded-lg transition-all flex items-center justify-center gap-1 whitespace-nowrap"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                  Guardar
+                                </button>
+                                <button
+                                  onClick={cancelEdit}
+                                  className="px-3 py-2 text-sm font-medium bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 rounded-lg transition-all whitespace-nowrap"
+                                >
+                                  Cancelar
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => startEdit(s)}
+                                  className="px-3 py-2 text-sm font-medium bg-white hover:bg-[#f5f0ff] text-[#7024BB] border border-[#7024BB] rounded-lg transition-all flex items-center justify-center gap-1 whitespace-nowrap"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                  </svg>
+                                  Editar
+                                </button>
+                                <button
+                                  onClick={() => deleteHorario(id)}
+                                  className="px-3 py-2 text-sm font-medium bg-white hover:bg-red-50 text-red-600 border border-red-300 rounded-lg transition-all flex items-center justify-center gap-1 whitespace-nowrap"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                  Borrar
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         )}
 
         {/* Modal de creación (local) */}
         {showCreateModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/20" onClick={closeCreateModal} />
-            <div className="relative z-10 w-full max-w-2xl mx-4 bg-white rounded-lg shadow-xl overflow-auto max-h-[85vh]">
-              <div className="flex items-center justify-between p-4 border-b">
-                <h3 className="text-lg font-semibold">Crear horario de tutoría</h3>
-                <button onClick={closeCreateModal} className="text-gray-500 hover:text-gray-700 ml-4">Cerrar ✕</button>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={closeCreateModal}>
+            <div className="relative w-full max-w-xl max-h-[85vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+              {/* Header */}
+              <div className="bg-gradient-to-r from-[#7024BB] to-[#5a1d99] px-5 py-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-bold text-white">Crear horario de tutoría</h3>
+                  </div>
+                  <button 
+                    onClick={closeCreateModal} 
+                    className="text-white/80 hover:text-white transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
               </div>
-              <div className="p-4">
-                {/* Formulario en dos columnas */}
+
+              {/* Body */}
+              <div className="p-5 overflow-y-auto flex-1">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-gray-500">Asignatura</label>
+                  {/* Asignatura */}
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      <span className="flex items-center gap-2">
+                        <svg className="w-4 h-4 text-[#7024BB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                        Asignatura
+                      </span>
+                    </label>
                     <input
                       value={newReserva.asignatura}
                       onChange={(e) => setNewReserva({ ...newReserva, asignatura: e.target.value })}
-                      className="w-full p-2 border rounded"
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#7024BB] focus:border-transparent transition-all"
+                      placeholder="Ej: Sistemas y Tecnologías Web"
                     />
                   </div>
+
+                  {/* Día de la semana */}
                   <div>
-                    <label className="text-xs text-gray-500">Día de la semana</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      <span className="flex items-center gap-2">
+                        <svg className="w-4 h-4 text-[#7024BB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        Día de la semana
+                      </span>
+                    </label>
                     <select
                       value={newReserva.diaSemana}
                       onChange={(e) => setNewReserva({ ...newReserva, diaSemana: e.target.value })}
-                      className="w-full p-2 border rounded"
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#7024BB] focus:border-transparent transition-all"
                     >
-                      <option value="lunes">lunes</option>
-                      <option value="martes">martes</option>
-                      <option value="miercoles">miercoles</option>
-                      <option value="jueves">jueves</option>
-                      <option value="viernes">viernes</option>
-                      <option value="sabado">sabado</option>
-                      <option value="domingo">domingo</option>
+                      <option value="lunes">Lunes</option>
+                      <option value="martes">Martes</option>
+                      <option value="miercoles">Miércoles</option>
+                      <option value="jueves">Jueves</option>
+                      <option value="viernes">Viernes</option>
+                      <option value="sabado">Sábado</option>
+                      <option value="domingo">Domingo</option>
                     </select>
                   </div>
+
+                  {/* Modalidad */}
                   <div>
-                    <label className="text-xs text-gray-500">Modalidad</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      <span className="flex items-center gap-2">
+                        <svg className="w-4 h-4 text-[#7024BB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        Modalidad
+                      </span>
+                    </label>
                     <select
                       value={newReserva.modalidad}
                       onChange={(e) => setNewReserva({ ...newReserva, modalidad: e.target.value })}
-                      className="w-full p-2 border rounded"
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#7024BB] focus:border-transparent transition-all"
                     >
-                      <option value="presencial">presencial</option>
-                      <option value="online">online</option>
+                      <option value="presencial">Presencial</option>
+                      <option value="online">Online</option>
                     </select>
                   </div>
-                  <div>
-                    <label className="text-xs text-gray-500">Lugar</label>
+
+                  {/* Lugar */}
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      <span className="flex items-center gap-2">
+                        <svg className="w-4 h-4 text-[#7024BB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Lugar
+                      </span>
+                    </label>
                     <input
                       value={newReserva.lugar}
                       onChange={(e) => setNewReserva({ ...newReserva, lugar: e.target.value })}
-                      className="w-full p-2 border rounded"
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#7024BB] focus:border-transparent transition-all"
+                      placeholder="Ej: Despacho 2.5 / Sala de reuniones"
                     />
                   </div>
+
+                  {/* Hora inicio */}
                   <div>
-                    <label className="text-xs text-gray-500">Hora inicio</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      <span className="flex items-center gap-2">
+                        <svg className="w-4 h-4 text-[#7024BB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Hora inicio
+                      </span>
+                    </label>
                     <input
                       type="time"
                       value={newReserva.horaInicio || '09:00'}
                       onChange={(e) => setNewReserva({ ...newReserva, horaInicio: e.target.value })}
-                      className="w-full p-2 border rounded"
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#7024BB] focus:border-transparent transition-all"
                     />
                   </div>
+
+                  {/* Hora fin */}
                   <div>
-                    <label className="text-xs text-gray-500">Hora fin</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      <span className="flex items-center gap-2">
+                        <svg className="w-4 h-4 text-[#7024BB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Hora fin
+                      </span>
+                    </label>
                     <input
                       type="time"
                       value={newReserva.horaFin || '10:00'}
                       onChange={(e) => setNewReserva({ ...newReserva, horaFin: e.target.value })}
-                      className="w-full p-2 border rounded"
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#7024BB] focus:border-transparent transition-all"
                     />
                   </div>
-                 </div>
-                 <div className="flex justify-end gap-2 mt-4">
-                   <button onClick={closeCreateModal} className="px-3 py-1 bg-gray-200 rounded">Cancelar</button>
-                   <button onClick={saveNewReserva} className="px-3 py-1 bg-violet-600 text-white rounded">Guardar</button>
-                 </div>
-               </div>
-             </div>
-           </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="bg-gray-50 px-5 py-3 border-t border-gray-200">
+                <div className="flex justify-end gap-3">
+                  <button 
+                    onClick={closeCreateModal} 
+                    className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-100 transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    onClick={saveNewReserva} 
+                    className="px-6 py-2.5 text-sm font-medium text-white bg-[#7024BB] hover:bg-[#5a1d99] rounded-xl transition-all flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Guardar horario
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
          )}
-      </div>
     </div>
   );
 }

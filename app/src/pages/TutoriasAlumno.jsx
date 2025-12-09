@@ -18,8 +18,7 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
   const [profesores, setProfesores] = useState([]); // [{ id, name, horarios: [] }, ...]
   const [loading, setLoading] = useState(false);
 
-  // Reserva drawer / form state
-  const [showReserveDrawer, setShowReserveDrawer] = useState(false);
+  // Reserva form state (sin drawer, ahora es widget lateral)
   const [reservedProfessor, setReservedProfessor] = useState(null);
   const [availableSlots, setAvailableSlots] = useState([]); // { isoStart, isoEnd, label }
   const [selectedSlot, setSelectedSlot] = useState(null);
@@ -28,6 +27,7 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
   const [modalidadReserva, setModalidadReserva] = useState('presencial');
   const [lugarReserva, setLugarReserva] = useState('');
   const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState(null); // { type: 'success' | 'error', text: '' }
 
   // mapping day name -> JS getDay index
   const dayNameToIndex = {
@@ -97,7 +97,7 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
 
         const entries = Array.from(map.values());
         const profsWithNames = await Promise.all(entries.map(async (p) => {
-          if (!p.id || p.id === 'sin-profesor') return { id: p.id, name: 'Profesor desconocido', horarios: p.horarios };
+          if (!p.id || p.id === 'sin-profesor') return { id: p.id, name: 'Profesor desconocido', horarios: p.horarios, asignaturas: [] };
           try {
             // prefer /api/usuarios
             let r = await fetchApi(`/api/usuarios/${encodeURIComponent(p.id)}`);
@@ -105,9 +105,11 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
             if (!r.ok) throw new Error('no user');
             const u = await r.json();
             const name = u.name || u.username || u.fullName || (u.email ? u.email.split('@')[0] : 'Profesor');
-            return { id: p.id, name, horarios: p.horarios };
+            // Extraer asignaturas únicas de los horarios
+            const asignaturas = [...new Set(p.horarios.map(h => h.asignatura).filter(Boolean))];
+            return { id: p.id, name, horarios: p.horarios, asignaturas };
           } catch {
-            return { id: p.id, name: 'Profesor desconocido', horarios: p.horarios };
+            return { id: p.id, name: 'Profesor desconocido', horarios: p.horarios, asignaturas: [] };
           }
         }));
 
@@ -123,7 +125,7 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
     return () => { cancelled = true; };
   }, [activeSubsection]);
 
-  // open reservation drawer for a professor
+  // open reservation form for a professor
   const openReserve = (prof) => {
     setReservedProfessor(prof);
     const slots = computeSlotsForProfessor(prof, 14);
@@ -133,24 +135,18 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
     setDescripcion('');
     setModalidadReserva('presencial');
     setLugarReserva('');
-    setShowReserveDrawer(true);
-  };
-
-  const closeReserve = () => {
-    setShowReserveDrawer(false);
-    setReservedProfessor(null);
-    setAvailableSlots([]);
-    setSelectedSlot(null);
   };
 
   // submit Tutoria to server (use /api/tutorias)
   const submitReserva = async () => {
     if (!reservedProfessor || !selectedSlot) {
-      alert('Selecciona un hueco de 30 min.');
+      setMessage({ type: 'error', text: 'Selecciona un hueco de 30 min.' });
+      setTimeout(() => setMessage(null), 5000);
       return;
     }
     if (!user || !(user._id || user.id)) {
-      alert('Usuario no identificado.');
+      setMessage({ type: 'error', text: 'Usuario no identificado.' });
+      setTimeout(() => setMessage(null), 5000);
       return;
     }
     setSaving(true);
@@ -210,11 +206,18 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
         }));
         setProfesores(profsWithNames);
       }
-      closeReserve();
-      alert('Tutoria creada correctamente.');
+      // Limpiar formulario tras reserva exitosa
+      setReservedProfessor(null);
+      setAvailableSlots([]);
+      setSelectedSlot(null);
+      setTema('');
+      setDescripcion('');
+      setMessage({ type: 'success', text: 'Tutoría creada correctamente' });
+      setTimeout(() => setMessage(null), 5000);
     } catch (err) {
       console.error('Error creando tutoria', err);
-      alert('No se pudo crear la tutoria: ' + (err.message || 'error'));
+      setMessage({ type: 'error', text: 'No se pudo crear la tutoría: ' + (err.message || 'error') });
+      setTimeout(() => setMessage(null), 5000);
     } finally {
       setSaving(false);
     }
@@ -258,7 +261,7 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
   const personLabel = (p) => {
     if (!p) return '';
     if (typeof p === 'string') return p;
-    return p.username || p.email || p.name || p.fullName || String(p._id || '');
+    return p.name || p.fullName || p.username || p.email || String(p._id || '');
   };
 
   // fetch historial para este estudiante en la semana actual
@@ -369,6 +372,26 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
             return estado === 'confirmada' || estado === 'confirmed' || estado === 'confirmado';
           });
         }
+        
+        // Cargar nombres de profesores si vienen como IDs
+        if (Array.isArray(data)) {
+          data = await Promise.all(data.map(async (t) => {
+            if (t.profesor && typeof t.profesor === 'string') {
+              try {
+                let r = await fetchApi(`/api/usuarios/${encodeURIComponent(t.profesor)}`);
+                if (!r.ok) r = await fetchApi(`/api/users/${encodeURIComponent(t.profesor)}`);
+                if (r.ok) {
+                  const prof = await r.json();
+                  return { ...t, profesor: prof };
+                }
+              } catch (e) {
+                console.error('Error cargando profesor', e);
+              }
+            }
+            return t;
+          }));
+        }
+        
         if (!cancelled) setMisTutorias(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error('Error cargando mis tutorías', err);
@@ -401,6 +424,8 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
   const [solicitudesPendientes, setSolicitudesPendientes] = useState([]);
   const [loadingSolicitudes, setLoadingSolicitudes] = useState(false);
   const [processingAction, setProcessingAction] = useState(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [tutoriaToCancel, setTutoriaToCancel] = useState(null);
 
   useEffect(() => {
     if (!activeSubsection || String(activeSubsection).toLowerCase() !== 'profesores') return;
@@ -428,6 +453,26 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
             return estado === 'pendiente' || estado === 'pending';
           });
         }
+        
+        // Cargar nombres de profesores si vienen como IDs
+        if (Array.isArray(data)) {
+          data = await Promise.all(data.map(async (t) => {
+            if (t.profesor && typeof t.profesor === 'string') {
+              try {
+                let r = await fetchApi(`/api/usuarios/${encodeURIComponent(t.profesor)}`);
+                if (!r.ok) r = await fetchApi(`/api/users/${encodeURIComponent(t.profesor)}`);
+                if (r.ok) {
+                  const prof = await r.json();
+                  return { ...t, profesor: prof };
+                }
+              } catch (e) {
+                console.error('Error cargando profesor', e);
+              }
+            }
+            return t;
+          }));
+        }
+        
         if (!cancelled) setSolicitudesPendientes(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error('Error cargando solicitudes pendientes', err);
@@ -450,10 +495,17 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
     }).filter(s => s.startDate).sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
   }, [solicitudesPendientes]);
 
-  const handleCancelarSolicitud = async (tutoriaId) => {
-    if (!confirm('¿Estás seguro de que deseas cancelar esta solicitud?')) return;
+  const handleCancelarSolicitud = async (tutoria) => {
+    setTutoriaToCancel(tutoria);
+    setShowCancelModal(true);
+  };
+
+  const confirmCancelTutoria = async () => {
+    if (!tutoriaToCancel) return;
     
+    const tutoriaId = tutoriaToCancel._id || tutoriaToCancel.id;
     setProcessingAction(tutoriaId);
+    
     try {
       const res = await fetchApi(`/api/tutorias/${encodeURIComponent(tutoriaId)}`, {
         method: 'DELETE',
@@ -462,36 +514,41 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
         const body = await res.json().catch(() => null);
         throw new Error(body?.error || body?.message || 'No se pudo cancelar la solicitud');
       }
-      // Recargar solicitudes
+      // Recargar solicitudes y mis tutorías
       setSolicitudesPendientes(prev => prev.filter(s => (s._id || s.id) !== tutoriaId));
-      alert('Solicitud cancelada correctamente');
+      setMisTutorias(prev => prev.filter(t => (t._id || t.id) !== tutoriaId));
+      setMessage({ type: 'success', text: 'Tutoría cancelada correctamente' });
+      setTimeout(() => setMessage(null), 5000);
     } catch (err) {
-      console.error('Error cancelando solicitud', err);
-      alert('No se pudo cancelar la solicitud: ' + (err.message || 'error'));
+      console.error('Error cancelando tutoría', err);
+      setMessage({ type: 'error', text: 'No se pudo cancelar la tutoría: ' + (err.message || 'error') });
+      setTimeout(() => setMessage(null), 5000);
     } finally {
       setProcessingAction(null);
+      setShowCancelModal(false);
+      setTutoriaToCancel(null);
     }
   };
 
   return (
-    <div className="bg-white rounded-lg p-4 sm:p-6 lg:p-8 shadow-sm">
+    <div className="mt-4">
       {/* Vista SOLICITUDES PENDIENTES */}
       {activeSubsection === 'profesores' ? (
         <div>
-          <div className="mb-6">
-            <h3 className="text-xl font-semibold text-gray-800">Solicitudes Pendientes</h3>
-            <p className="text-sm text-gray-500 mt-1">Tutorías en espera de confirmación del profesor</p>
-          </div>
-
           {loadingSolicitudes ? (
-            <div className="text-center py-8 text-gray-500">Cargando solicitudes...</div>
+            <div className="flex justify-center items-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#7024BB]"></div>
+            </div>
           ) : parsedSolicitudes.length === 0 ? (
-            <div className="text-center py-12 bg-gray-50 rounded-lg">
-              <div className="text-gray-400 mb-2">⏳</div>
-              <div className="text-sm text-gray-500">No tienes solicitudes pendientes en este momento</div>
+            <div className="text-center py-16">
+              <svg className="w-20 h-20 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-gray-500 text-lg">No tienes solicitudes pendientes</p>
+              <p className="text-gray-400 text-sm mt-2">Tus solicitudes de tutoría aparecerán aquí</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {parsedSolicitudes.map((tutoria) => {
                 const start = new Date(tutoria.startDate);
                 const end = tutoria.endDate ? new Date(tutoria.endDate) : null;
@@ -500,96 +557,80 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
                 return (
                   <div
                     key={tutoria._id || tutoria.id || `${tutoria.startDate}-${tutoria.title}`}
-                    className={`bg-white border-l-4 border-yellow-500 rounded-lg shadow-sm hover:shadow-md transition-shadow ${isPast ? 'opacity-75' : ''}`}
+                    className="p-4 rounded-xl bg-gray-50 hover:ring-2 hover:ring-yellow-400 transition-all"
                   >
-                    <div className="p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded">
-                              PENDIENTE
+                    <div className="flex items-center justify-between gap-4">
+                      {/* Info principal */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-semibold text-gray-900 truncate">{tutoria.title || 'Tutoría'}</h4>
+                          <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-full flex-shrink-0">
+                            Pendiente
+                          </span>
+                          {isPast && (
+                            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full flex-shrink-0">
+                              Pasada
                             </span>
-                            {isPast && (
-                              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                                Fecha pasada
-                              </span>
-                            )}
-                          </div>
-                          <h4 className="font-semibold text-gray-800 text-lg leading-tight mb-1">
-                            {tutoria.title || 'Tutoría'}
-                          </h4>
-                          <div className="text-sm text-gray-500">
-                            Profesor: {tutoria.profesor ? personLabel(tutoria.profesor) : 'Sin asignar'}
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => openSession(tutoria)}
-                          className="text-violet-600 hover:text-violet-700 p-2"
-                          title="Ver detalles"
-                        >
-                          <span className="text-xl">ℹ️</span>
-                        </button>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mb-4">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <span className="text-violet-600">📅</span>
-                            <span>{start.toLocaleDateString('es-ES', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <span className="text-violet-600">🕐</span>
-                            <span>
-                              {start.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                              {end ? ` - ${end.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}` : ''}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          {tutoria.modalidad && (
-                            <div className="flex items-center gap-2 text-gray-600">
-                              <span className="text-violet-600">{tutoria.modalidad === 'online' ? '💻' : '🏫'}</span>
-                              <span className="capitalize">{tutoria.modalidad}</span>
-                            </div>
-                          )}
-                          {tutoria.lugar && (
-                            <div className="flex items-center gap-2 text-gray-600">
-                              <span className="text-violet-600">📍</span>
-                              <span className="truncate">{tutoria.lugar}</span>
-                            </div>
                           )}
                         </div>
+                        <p className="text-sm text-gray-500">
+                          {tutoria.profesor ? personLabel(tutoria.profesor) : 'Profesor sin asignar'}
+                        </p>
                       </div>
 
-                      {tutoria.descripcion && (
-                        <div className="mb-4 p-3 bg-gray-50 rounded text-sm">
-                          <div className="text-xs text-gray-500 mb-1">Descripción:</div>
-                          <div className="text-gray-700">{tutoria.descripcion}</div>
+                      {/* Detalles horizontales */}
+                      <div className="flex items-center gap-4 text-sm text-gray-700">
+                        <div className="flex items-center gap-1.5">
+                          <svg className="w-4 h-4 text-[#7024BB] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <span className="hidden sm:inline">{start.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span>
                         </div>
-                      )}
-
-                      <div className="flex gap-2 pt-3 border-t border-gray-100">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openSession(tutoria);
-                          }}
-                          className="flex-1 px-4 py-2 bg-violet-50 text-violet-600 hover:bg-violet-100 rounded-md font-medium text-sm transition-colors"
-                        >
-                          Ver detalles
-                        </button>
-                        <button
-                          onClick={() => handleCancelarSolicitud(tutoria._id || tutoria.id)}
-                          disabled={processingAction === (tutoria._id || tutoria.id)}
-                          className="flex-1 px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-md font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {processingAction === (tutoria._id || tutoria.id) ? 'Cancelando...' : 'Cancelar solicitud'}
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <svg className="w-4 h-4 text-[#7024BB] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span>{start.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        {tutoria.modalidad && (
+                          <div className="flex items-center gap-1.5">
+                            <svg className="w-4 h-4 text-[#7024BB] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tutoria.modalidad === 'online' ? 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' : 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4'} />
+                            </svg>
+                            <span className="hidden md:inline capitalize">{tutoria.modalidad}</span>
+                          </div>
+                        )}
                       </div>
+
+                      {/* Botón cancelar */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCancelarSolicitud(tutoria);
+                        }}
+                        disabled={processingAction === (tutoria._id || tutoria.id)}
+                        className="px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-300 rounded-lg hover:bg-red-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                      >
+                        {processingAction === (tutoria._id || tutoria.id) ? 'Cancelando...' : 'Cancelar'}
+                      </button>
                     </div>
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {/* Mensaje de confirmación/error */}
+          {message && (
+            <div className={`mt-4 p-4 rounded-xl border-2 font-medium ${
+              message.type === 'error' 
+                ? 'bg-red-50 text-red-700 border-red-200' 
+                : 'bg-green-50 text-green-700 border-green-200'
+            }`}>
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{message.type === 'error' ? '⚠️' : '✅'}</span>
+                <span>{message.text}</span>
+              </div>
             </div>
           )}
         </div>
@@ -598,20 +639,24 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
       {/* Vista MIS TUTORIAS para alumno */}
       {activeSubsection === 'mis-tutorias' ? (
         <div>
-          <div className="mb-6">
-            <h3 className="text-xl font-semibold text-gray-800">Mis Tutorías Confirmadas</h3>
-            <p className="text-sm text-gray-500 mt-1">Todas tus tutorías confirmadas y próximas</p>
-          </div>
-
-          {loadingMisTutorias ? (
-            <div className="text-center py-8 text-gray-500">Cargando tutorías...</div>
-          ) : parsedMisTutorias.length === 0 ? (
-            <div className="text-center py-12 bg-gray-50 rounded-lg">
-              <div className="text-gray-400 mb-2">📅</div>
-              <div className="text-sm text-gray-500">No tienes tutorías confirmadas en este momento</div>
+          {loadingMisTutorias && (
+            <div className="flex justify-center items-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#7024BB]"></div>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          )}
+
+          {!loadingMisTutorias && parsedMisTutorias.length === 0 && (
+            <div className="text-center py-16">
+              <svg className="w-20 h-20 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <p className="text-gray-500 text-lg">No tienes tutorías confirmadas</p>
+              <p className="text-gray-400 text-sm mt-2">Ve a "Reservar tutoría" para agendar tu primera sesión</p>
+            </div>
+          )}
+
+          {!loadingMisTutorias && parsedMisTutorias.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {parsedMisTutorias.map((tutoria) => {
                 const start = new Date(tutoria.startDate);
                 const end = tutoria.endDate ? new Date(tutoria.endDate) : null;
@@ -620,65 +665,84 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
                 return (
                   <div
                     key={tutoria._id || tutoria.id || `${tutoria.startDate}-${tutoria.title}`}
-                    className={`bg-white border rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden ${isPast ? 'opacity-75' : ''}`}
+                    className="p-5 rounded-xl bg-gray-50 hover:ring-2 hover:ring-[#7024BB] transition-all cursor-pointer"
                     onClick={() => openSession(tutoria)}
                   >
-                    <div className="h-2 bg-gradient-to-r from-green-600 to-green-400" />
-                    <div className="p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-800 text-lg leading-tight mb-1">
-                            {tutoria.title || 'Tutoría'}
-                          </h4>
-                          <div className="text-sm text-gray-500">
-                            {tutoria.profesor ? personLabel(tutoria.profesor) : 'Profesor'}
-                          </div>
-                        </div>
-                        {isPast && (
-                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                            Pasada
-                          </span>
-                        )}
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 text-lg">{tutoria.title || 'Tutoría'}</h3>
+                        <p className="text-sm text-gray-500 mt-1">
+                          {tutoria.profesor ? personLabel(tutoria.profesor) : 'Profesor'}
+                        </p>
                       </div>
-
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <span className="text-violet-600">📅</span>
-                          <span>{start.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <span className="text-violet-600">🕐</span>
-                          <span>
-                            {start.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                            {end ? ` - ${end.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}` : ''}
-                          </span>
-                        </div>
-                        {tutoria.modalidad && (
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <span className="text-violet-600">{tutoria.modalidad === 'online' ? '💻' : '🏫'}</span>
-                            <span className="capitalize">{tutoria.modalidad}</span>
-                          </div>
+                      <span className={`text-xs px-3 py-1.5 rounded-full font-medium flex items-center gap-1 ${
+                        isPast
+                          ? 'bg-gray-50 text-gray-600 border border-gray-200'
+                          : 'bg-green-50 text-green-700 border border-green-200'
+                      }`}>
+                        {isPast ? (
+                          <>⏱ Pasada</>
+                        ) : (
+                          <>✓ Confirmada</>
                         )}
-                        {tutoria.lugar && (
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <span className="text-violet-600">📍</span>
-                            <span className="truncate">{tutoria.lugar}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="mt-4 pt-3 border-t border-gray-100">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openSession(tutoria);
-                          }}
-                          className="w-full text-center text-sm text-violet-600 hover:text-violet-700 font-medium"
-                        >
-                          Ver detalles →
-                        </button>
-                      </div>
+                      </span>
                     </div>
+
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center gap-2 text-sm text-gray-700">
+                        <svg className="w-4 h-4 text-[#7024BB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span>{start.toLocaleDateString('es-ES', { 
+                          weekday: 'long', 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-700">
+                        <svg className="w-4 h-4 text-[#7024BB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>
+                          {start.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                          {end ? ` - ${end.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}` : ''}
+                        </span>
+                      </div>
+                      {tutoria.modalidad && (
+                        <div className="flex items-center gap-2 text-sm text-gray-700">
+                          <svg className="w-4 h-4 text-[#7024BB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tutoria.modalidad === 'online' ? 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' : 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4'} />
+                          </svg>
+                          <span className="capitalize">{tutoria.modalidad}</span>
+                        </div>
+                      )}
+                      {tutoria.lugar && (
+                        <div className="flex items-center gap-2 text-sm text-gray-700">
+                          <svg className="w-4 h-4 text-[#7024BB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          <span>{tutoria.lugar}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {!isPast && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCancelarSolicitud(tutoria);
+                        }}
+                        disabled={processingAction === (tutoria._id || tutoria.id)}
+                        className="w-full px-4 py-2.5 text-sm font-medium text-red-600 bg-white border border-red-300 rounded-xl hover:bg-red-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        {processingAction === (tutoria._id || tutoria.id) ? 'Cancelando...' : 'Cancelar tutoría'}
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -894,106 +958,203 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
         </div>
       ) : null}
 
-      <div className="flex flex-col items-start justify-start min-h-[300px] sm:min-h-[400px] lg:min-h-[500px]">
-        <div className="text-left w-full">
-          {activeSubsection === 'reservar' ? (
-            <div className="mt-6 w-full">
-              <h3 className="text-md font-semibold text-gray-800 mb-3">Profesores con horarios</h3>
-              {loading ? <div className="text-sm text-gray-500">Cargando...</div> : null}
-              {profesores.length === 0 ? (
-                <div className="text-sm text-gray-500">No hay profesores disponibles en este momento.</div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {profesores.map((p) => (
-                    <div key={p.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col justify-between items-start">
-                      <div className="flex gap-4 items-start w-full">
-                        <div className="flex-shrink-0">
-                          <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-lg font-semibold text-gray-700">
-                            {(p.name || 'P').split(' ').map(n => n?.[0] || '').slice(0,2).join('').toUpperCase()}
+      {/* Vista RESERVAR - Layout de 2 columnas igual a ReservaEspacios */}
+      {activeSubsection === 'reservar' ? (
+        <div className="mt-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Widget izquierdo: Lista de profesores */}
+            <div className="col-span-1">
+              <section className="p-6 rounded-xl bg-gray-50 h-full">
+                <div className="mb-4">
+                  <h4 className="text-lg font-semibold text-gray-900">Profesores disponibles</h4>
+                </div>
+                
+                {loading && <p className="text-sm text-gray-500">Cargando profesores...</p>}
+                
+                {/* Lista de profesores */}
+                <div className="space-y-3">
+                  {profesores.length === 0 && !loading ? (
+                    <div className="text-center py-8">
+                      <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                      </svg>
+                      <p className="text-sm text-gray-500">No hay profesores disponibles</p>
+                    </div>
+                  ) : (
+                    profesores.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => onReservar(p)}
+                        className={`w-full text-left p-4 rounded-xl transition-all ${
+                          reservedProfessor && reservedProfessor.id === p.id
+                            ? 'bg-white ring-2 ring-[#7024BB]' 
+                            : 'bg-white hover:bg-[#f5f0ff]'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="font-semibold text-gray-900">{p.name}</div>
+                            {p.asignaturas && p.asignaturas.length > 0 && (
+                              <div className="text-xs text-[#7024BB] font-medium mt-1">
+                                {p.asignaturas.join(', ')}
+                              </div>
+                            )}
+                            <div className="text-xs text-gray-500 mt-1">{p.horarios.length} {p.horarios.length === 1 ? 'franja disponible' : 'franjas disponibles'}</div>
+                          </div>
+                          <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                            {p.horarios.length}
                           </div>
                         </div>
-                        <div className="flex-1">
-                          <div className="text-lg font-semibold text-gray-800">{p.name}</div>
-                          <div className="text-xs text-gray-500 mt-1">{p.horarios.length} {p.horarios.length === 1 ? 'sesion' : 'franjas'}</div>
-                          <ul className="mt-3 p-0 text-sm text-gray-600 space-y-1 max-h-28 overflow-auto pr-2 text-left">
-                            {p.horarios.slice(0, 6).map((h) => (
-                              <li key={h._id || `${p.id}-${h.diaSemana}-${h.horaInicio}`} className="flex items-center gap-2">
-                                <span>{h.asignatura ? `${h.asignatura} · ` : ''}{h.diaSemana} {h.horaInicio} - {h.horaFin}{h.modalidad ? <span className="text-xs text-gray-400 ml-2">· {h.modalidad}</span> : null}</span>
-                              </li>
-                            ))}
-                            {p.horarios.length > 6 && <li className="text-xs text-gray-400">...y más</li>}
-                          </ul>
+                      </button>
+                    ))
+                  )}
+                  </div>
+              </section>
+            </div>
+
+            {/* Widget derecho: Detalle y formulario de reserva */}
+            <div className="col-span-1">
+              <section className="p-6 rounded-xl bg-gray-50 h-full">
+                <h3 className="sr-only">Detalle y reserva</h3>
+                
+                {!reservedProfessor && (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center text-gray-500">
+                      <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                      </svg>
+                      <p className="text-sm">Selecciona un profesor para ver los horarios disponibles</p>
+                    </div>
+                  </div>
+                )}
+
+                {reservedProfessor && (
+                  <div className="space-y-6">
+                    {/* Encabezado del profesor */}
+                    <div className="pb-4 border-b border-gray-200">
+                      <h4 className="font-bold text-xl text-gray-900">{reservedProfessor.name}</h4>
+                      {reservedProfessor.asignaturas && reservedProfessor.asignaturas.length > 0 && (
+                        <div className="text-sm text-[#7024BB] font-medium mt-1">
+                          {reservedProfessor.asignaturas.join(' • ')}
                         </div>
-                      </div>
-                      <div className="mt-4 w-full">
-                        <button onClick={() => onReservar(p)} className="w-full px-3 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-md">Reservar</button>
+                      )}
+                      <p className="text-sm text-gray-600 mt-2">Selecciona un horario y completa los detalles</p>
+                    </div>
+
+                    {/* Formulario de reserva */}
+                    <div className="space-y-3">
+                      <label className="block text-sm font-medium text-gray-700">Huecos disponibles (30 min)</label>
+                      <div className="max-h-48 overflow-auto border border-gray-300 rounded-xl p-3 bg-white">
+                        {availableSlots.length === 0 ? (
+                          <div className="text-center py-4 text-sm text-gray-500">No hay huecos disponibles en los próximos días</div>
+                        ) : (
+                          <div className="space-y-2">
+                            {availableSlots.map((s) => (
+                              <label 
+                                key={s.isoStart} 
+                                className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all ${
+                                  selectedSlot && selectedSlot.isoStart === s.isoStart 
+                                    ? 'bg-[#7024BB] text-white' 
+                                    : 'bg-gray-50 hover:bg-gray-100'
+                                }`}
+                              >
+                                <input 
+                                  type="radio" 
+                                  name="slot" 
+                                  checked={selectedSlot && selectedSlot.isoStart === s.isoStart} 
+                                  onChange={() => setSelectedSlot(s)}
+                                  className="w-4 h-4"
+                                />
+                                <span className="flex-1 text-sm font-medium">{s.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : null
-          }
-        </div>
-      </div>
 
-      {/* Drawer / slide form */}
-      {showReserveDrawer && reservedProfessor && (
-        <div className="fixed inset-0 z-50 flex">
-          <div className="flex-1" onClick={closeReserve} />
-          <div className="w-full sm:w-96 bg-white shadow-xl p-4 overflow-auto">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="font-semibold">Reservar con {reservedProfessor.name}</h4>
-              <button onClick={closeReserve} className="text-gray-600">Cerrar</button>
-            </div>
+                    <div className="space-y-3">
+                      <label className="block text-sm font-medium text-gray-700">Tema</label>
+                      <input 
+                        type="text" 
+                        value={tema} 
+                        onChange={(e) => setTema(e.target.value)} 
+                        className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-[#7024BB] focus:border-transparent transition-all" 
+                        placeholder="Ej: Consulta sobre el proyecto"
+                      />
+                    </div>
 
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs text-gray-500">Huecos disponibles (30 min)</label>
-                <div className="mt-2 max-h-48 overflow-auto border rounded p-2">
-                  {availableSlots.length === 0 ? <div className="text-sm text-gray-500">No hay huecos disponibles en los próximos días.</div> : availableSlots.map((s) => (
-                    <label key={s.isoStart} className="flex items-center gap-2 text-sm p-1 cursor-pointer">
-                      <input type="radio" name="slot" checked={selectedSlot && selectedSlot.isoStart === s.isoStart} onChange={() => setSelectedSlot(s)} />
-                      <span>{s.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
+                    <div className="space-y-3">
+                      <label className="block text-sm font-medium text-gray-700">Descripción (opcional)</label>
+                      <textarea 
+                        value={descripcion} 
+                        onChange={(e) => setDescripcion(e.target.value)} 
+                        className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-[#7024BB] focus:border-transparent transition-all" 
+                        rows={3}
+                        placeholder="Agrega detalles adicionales..."
+                      />
+                    </div>
 
-              <div>
-                <label className="text-xs text-gray-500">Tema</label>
-                <input value={tema} onChange={(e) => setTema(e.target.value)} className="w-full p-2 border rounded" />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500">Descripción (opcional)</label>
-                <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} className="w-full p-2 border rounded" rows={3} />
-              </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Modalidad</label>
+                        <select 
+                          value={modalidadReserva} 
+                          onChange={(e) => setModalidadReserva(e.target.value)} 
+                          className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-[#7024BB] focus:border-transparent transition-all"
+                        >
+                          <option value="presencial">Presencial</option>
+                          <option value="online">Online</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Lugar (opcional)</label>
+                        <input 
+                          type="text"
+                          value={lugarReserva} 
+                          onChange={(e) => setLugarReserva(e.target.value)} 
+                          className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-[#7024BB] focus:border-transparent transition-all"
+                          placeholder="Ej: Aula 1.5"
+                        />
+                      </div>
+                    </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs text-gray-500">Modalidad</label>
-                  <select value={modalidadReserva} onChange={(e) => setModalidadReserva(e.target.value)} className="w-full p-2 border rounded">
-                    <option value="presencial">presencial</option>
-                    <option value="online">online</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500">Lugar (opcional)</label>
-                  <input value={lugarReserva} onChange={(e) => setLugarReserva(e.target.value)} className="w-full p-2 border rounded" />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <button onClick={closeReserve} className="px-3 py-1 bg-gray-200 rounded">Cancelar</button>
-                <button onClick={submitReserva} disabled={saving || !selectedSlot} className="px-3 py-1 bg-violet-600 text-white rounded">
-                  {saving ? 'Reservando...' : 'Confirmar reserva'}
-                </button>
-              </div>
+                    <div className="flex gap-3 pt-3">
+                      <button 
+                        onClick={() => setReservedProfessor(null)} 
+                        className="flex-1 px-6 py-3 bg-white hover:bg-gray-100 text-gray-700 rounded-xl border border-gray-300 font-medium transition-all"
+                      >
+                        Cancelar
+                      </button>
+                      <button 
+                        onClick={submitReserva} 
+                        disabled={saving || !selectedSlot} 
+                        className="flex-1 px-6 py-3 bg-[#7024BB] hover:bg-[#5a1d99] text-white rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {saving ? 'Reservando...' : 'Reservar'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </section>
             </div>
           </div>
+
+          {/* Mensaje de confirmación/error */}
+          {message && (
+            <div className={`mt-4 p-4 rounded-xl border-2 font-medium ${
+              message.type === 'error' 
+                ? 'bg-red-50 text-red-700 border-red-200' 
+                : 'bg-green-50 text-green-700 border-green-200'
+            }`}>
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{message.type === 'error' ? '⚠️' : '✅'}</span>
+                <span>{message.text}</span>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      ) : null}
 
       {/* Modal detalle - disponible en todas las secciones */}
       {selectedSession && (
@@ -1096,7 +1257,7 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
                 <button
                   onClick={() => {
                     closeSession();
-                    handleCancelarSolicitud(selectedSession._id || selectedSession.id);
+                    handleCancelarSolicitud(selectedSession);
                   }}
                   disabled={processingAction === (selectedSession._id || selectedSession.id)}
                   className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1104,6 +1265,40 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
                   {processingAction === (selectedSession._id || selectedSession.id) ? 'Cancelando...' : 'Cancelar tutoría'}
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmación de cancelación */}
+      {showCancelModal && tutoriaToCancel && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowCancelModal(false); setTutoriaToCancel(null); }}>
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 text-center mb-2">¿Cancelar tutoría?</h3>
+              <p className="text-sm text-gray-600 text-center">
+                ¿Estás seguro de que quieres cancelar la tutoría <strong>{tutoriaToCancel.title || tutoriaToCancel.tema || 'esta tutoría'}</strong>{tutoriaToCancel.profesor ? ` con ${personLabel(tutoriaToCancel.profesor)}` : ''}?
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => { setShowCancelModal(false); setTutoriaToCancel(null); }}
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-all"
+              >
+                No, volver
+              </button>
+              <button 
+                onClick={confirmCancelTutoria}
+                disabled={processingAction}
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-700 transition-all disabled:opacity-50"
+              >
+                {processingAction ? 'Cancelando...' : 'Sí, cancelar'}
+              </button>
             </div>
           </div>
         </div>
