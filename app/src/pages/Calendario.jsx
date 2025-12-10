@@ -40,24 +40,54 @@ function Calendario() {
         endDate.setHours(23, 59, 59, 999);
       }
 
-      const [eventosRes, tutoriasRes] = await Promise.all([
-        axios.get(`http://localhost:4000/api/eventos`, {
-          params: {
-            owner: user._id,
-            start: startDate.toISOString(),
-            end: endDate.toISOString()
-          }
-        }),
-        axios.get(`http://localhost:4000/api/tutorias`, {
-          params: user.rol === 'profesor' ? { profesor: user._id } : { estudiante: user._id },
-        })
-      ]);
+      // Obtener eventos
+      const eventosRes = await axios.get(`http://localhost:4000/api/eventos`, {
+        params: {
+          owner: user._id,
+          start: startDate.toISOString(),
+          end: endDate.toISOString()
+        }
+      });
+
+      // Obtener tutorías con fallback
+      let tutoriasRes;
+      if (user.rol === 'profesor') {
+        try {
+          tutoriasRes = await axios.get(`http://localhost:4000/api/tutorias`, {
+            params: {
+              profesor: user._id,
+              inicio: startDate.toISOString(),
+              fin: endDate.toISOString()
+            }
+          });
+        } catch (error) {
+          // Fallback a endpoint de horarios
+          tutoriasRes = await axios.get(`http://localhost:4000/api/horarios/reservas/profesor/${user._id}`);
+        }
+      } else {
+        try {
+          tutoriasRes = await axios.get(`http://localhost:4000/api/tutorias`, {
+            params: {
+              estudiante: user._id,
+              inicio: startDate.toISOString(),
+              fin: endDate.toISOString()
+            }
+          });
+        } catch (error) {
+          // Fallback a endpoint reservas por alumno
+          tutoriasRes = await axios.get(`http://localhost:4000/api/horarios/reservas/alumno/${user._id}`);
+        }
+      }
 
       setEventos(eventosRes.data);
-      setTutorias(tutoriasRes.data.filter(t => {
+      
+      // Filtrar tutorías por rango de fechas si el fallback no filtró
+      const tutoriasFiltradas = tutoriasRes.data.filter(t => {
         const fecha = new Date(t.fechaInicio);
         return fecha >= startDate && fecha <= endDate;
-      }));
+      });
+      
+      setTutorias(tutoriasFiltradas);
 
       setLoading(false);
     } catch (error) {
