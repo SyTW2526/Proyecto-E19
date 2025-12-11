@@ -14,7 +14,8 @@ function Perfil({ user }) {
     telefono: '',
     avatarUrl: '',
     biography: '',
-    username: ''
+    username: '',
+    asignaturasCursadas: []
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -29,6 +30,90 @@ function Perfil({ user }) {
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
+
+  // Lista de asignaturas por curso
+  const asignaturasDisponibles = [
+    { 
+      curso: 'Curso 1', 
+      asignaturas: [
+        { cuatrimestre: 'Primer cuatrimestre', items: [
+          '139261011 - Informática Básica',
+          '139261012 - Álgebra',
+          '139261013 - Cálculo',
+          '139261014 - Fundamentos Físicos para la Ingeniería',
+          '139261015 - Organizaciones Empresariales'
+        ]},
+        { cuatrimestre: 'Segundo cuatrimestre', items: [
+          '139261021 - Algoritmos y Estructuras de Datos',
+          '139261022 - Principios de Computadores',
+          '139261023 - Optimización',
+          '139261024 - Sistemas Electrónicos Digitales',
+          '139261025 - Expresión Gráfica en Ingeniería'
+        ]}
+      ]
+    },
+    { 
+      curso: 'Curso 2', 
+      asignaturas: [
+        { cuatrimestre: 'Primer cuatrimestre', items: [
+          '139262011 - Estadística',
+          '139262012 - Computabilidad y Algoritmia',
+          '139262013 - Estructura de Computadores',
+          '139262014 - Sistemas Operativos',
+          '139262015 - Inglés Técnico'
+        ]},
+        { cuatrimestre: 'Segundo cuatrimestre', items: [
+          '139262021 - Algoritmos y Estructuras de Datos Avanzadas',
+          '139262022 - Redes y Sistemas Distribuidos',
+          '139262023 - Administración de Sistemas',
+          '139262024 - Fundamentos de Ingeniería del Software',
+          '139262025 - Código Deontológico y Aspectos Legales'
+        ]}
+      ]
+    },
+    { 
+      curso: 'Curso 3', 
+      asignaturas: [
+        { cuatrimestre: 'Primer cuatrimestre', items: [
+          '139263011 - Bases de Datos',
+          '139263012 - Inteligencia Artificial',
+          '139263013 - Sistemas de Interacción Persona-Computador',
+          '139263014 - Lenguajes y Paradigmas de Programación',
+          '139263015 - Gestión de Proyectos Informáticos'
+        ]},
+        { cuatrimestre: 'Segundo cuatrimestre', items: [
+          '139263121 - Procesadores de Lenguajes',
+          '139263122 - Diseño y Análisis de Algoritmos',
+          '139263123 - Programación de Aplicaciones Interactivas',
+          '139263124 - Inteligencia Artificial Avanzada',
+          '139263125 - Tratamiento Inteligente de Datos',
+          '139263221 - Diseño de Procesadores',
+          '139263222 - Arquitectura de Computadores',
+          '139263225 - Sistemas Operativos Avanzados',
+          '139263226 - Redes de Computadores en Ingeniería de Computadores',
+          '139263227 - Laboratorio de Redes en Ingeniería de Computadores'
+        ]}
+      ]
+    },
+    { 
+      curso: 'Curso 4', 
+      asignaturas: [
+        { cuatrimestre: 'Primer cuatrimestre', items: [
+          '139260901 - Administración y Diseño de Bases de Datos',
+          '139260902 - Visión por Computador',
+          '139264111 - Interfaces Inteligentes',
+          '139264112 - Sistemas Inteligentes',
+          '139264211 - Sistemas Empotrados',
+          '139264311 - Laboratorio de Desarrollo y Herramientas'
+        ]},
+        { cuatrimestre: 'Segundo cuatrimestre', items: [
+          '139264021 - Inteligencia Emocional',
+          '139264022 - Prácticas Externas',
+          '139264023 - Trabajo de Fin de Grado'
+        ]}
+      ]
+    }
+  ];
 
   const API_BASE =
     (typeof window !== 'undefined' && (window.__API_BASE__ || window.localStorage.getItem('API_BASE'))) ||
@@ -64,7 +149,8 @@ function Perfil({ user }) {
           telefono: data.telefono || '',
           avatarUrl: data.avatarUrl || '',
           biography: data.biography || '',
-          username: data.username || ''
+          username: data.username || '',
+          asignaturasCursadas: data.asignaturasCursadas || []
         });
       } catch (err) {
         console.error('Error cargando datos del usuario:', err);
@@ -77,7 +163,8 @@ function Perfil({ user }) {
           telefono: user.telefono || '',
           avatarUrl: user.avatarUrl || '',
           biography: user.biography || '',
-          username: user.username || ''
+          username: user.username || '',
+          asignaturasCursadas: user.asignaturasCursadas || []
         });
       } finally {
         setLoading(false);
@@ -203,10 +290,23 @@ function Perfil({ user }) {
       telefono: userData?.telefono || '',
       avatarUrl: userData?.avatarUrl || '',
       biography: userData?.biography || '',
-      username: userData?.username || ''
+      username: userData?.username || '',
+      asignaturasCursadas: userData?.asignaturasCursadas || []
     });
     setEditing(false);
     setError(null);
+  };
+
+  const handleAsignaturaToggle = (asignatura) => {
+    setFormData(prev => {
+      const isSelected = prev.asignaturasCursadas.includes(asignatura);
+      return {
+        ...prev,
+        asignaturasCursadas: isSelected
+          ? prev.asignaturasCursadas.filter(a => a !== asignatura)
+          : [...prev.asignaturasCursadas, asignatura]
+      };
+    });
   };
 
   const handleCancelPasswordChange = () => {
@@ -419,6 +519,46 @@ function Perfil({ user }) {
               </div>
             </div>
 
+            {/* Selector de asignaturas cursadas */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                {userData?.rol === 'profesor' ? 'Asignaturas Impartidas' : 'Asignaturas Cursadas'}
+              </label>
+              <div className="border border-gray-300 rounded-lg p-4 max-h-96 overflow-y-auto bg-white">
+                {asignaturasDisponibles.map((cursoData, cursoIdx) => (
+                  <div key={cursoIdx} className="mb-4 last:mb-0">
+                    <h4 className="font-semibold text-violet-700 mb-2">{cursoData.curso}</h4>
+                    {cursoData.asignaturas.map((cuatrimestreData, cuatIdx) => (
+                      <div key={cuatIdx} className="mb-3">
+                        <div className="text-xs font-medium text-gray-600 mb-2 pl-2">
+                          {cuatrimestreData.cuatrimestre}
+                        </div>
+                        <div className="space-y-1 pl-4">
+                          {cuatrimestreData.items.map((asignatura, asigIdx) => (
+                            <label
+                              key={asigIdx}
+                              className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-50 p-1 rounded"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={formData.asignaturasCursadas.includes(asignatura)}
+                                onChange={() => handleAsignaturaToggle(asignatura)}
+                                className="w-4 h-4 text-violet-600 border-gray-300 rounded focus:ring-violet-500"
+                              />
+                              <span className="text-gray-700">{asignatura}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+              <div className="text-xs text-gray-500 mt-2">
+                Seleccionadas: {formData.asignaturasCursadas.length} asignaturas
+              </div>
+            </div>
+
             <div className="flex gap-3 pt-4 border-t border-gray-200">
               <button
                 onClick={handleSave}
@@ -513,6 +653,55 @@ function Perfil({ user }) {
                       ? new Date(userData.createdAt).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })
                       : 'Fecha no disponible'}
                   </span>
+                </div>
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Icon name="refresh-cw" className="w-4 h-4 text-violet-600" />
+                  <span>
+                    Última actualización: {userData?.updatedAt 
+                      ? new Date(userData.updatedAt).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })
+                      : 'No disponible'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Sección de asignaturas cursadas */}
+            <div className="pt-6 border-t border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                {userData?.rol === 'profesor' ? 'Asignaturas Impartidas' : 'Asignaturas Cursadas'}
+              </h3>
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <p className="text-sm text-gray-600 mb-4">
+                  {userData?.rol === 'profesor' 
+                    ? 'Selecciona las asignaturas que impartes' 
+                    : 'Selecciona las asignaturas que estás cursando o has cursado'}
+                </p>
+                
+                {userData?.asignaturasCursadas && userData.asignaturasCursadas.length > 0 ? (
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
+                      {userData.asignaturasCursadas.map((asignatura, idx) => (
+                        <span
+                          key={idx}
+                          className="px-3 py-1 bg-violet-100 text-violet-700 rounded-full text-sm"
+                        >
+                          {asignatura}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-2">
+                      Total: {userData.asignaturasCursadas.length} asignaturas
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500 italic">
+                    No has seleccionado ninguna asignatura. Haz clic en "Editar perfil" para añadir asignaturas.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Sección de 
                 </div>
                 <div className="flex items-center gap-2 text-gray-600">
                   <Icon name="refresh-cw" className="w-4 h-4 text-violet-600" />
