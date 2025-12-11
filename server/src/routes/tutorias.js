@@ -32,6 +32,24 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// Listar tutorías de un usuario (como profesor o estudiante)
+router.get("/usuario/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const tutorias = await Tutoria.find({
+      estudiante: userId
+    })
+    .populate("profesor", "name email")
+    .populate("estudiante", "name email")
+    .sort({ fechaInicio: 1 })
+    .limit(100);
+    
+    res.json(tutorias);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Listar tutorías por profesor/estudiante y rango de fechas
 router.get("/", async (req, res) => {
   try {
@@ -40,11 +58,14 @@ router.get("/", async (req, res) => {
     if (profesor) q.profesor = profesor;
     if (estudiante) q.estudiante = estudiante;
     if (inicio && fin) {
-      q.$or = [
-        { fechaInicio: { $lt: new Date(fin) }, fechaFin: { $gt: new Date(inicio) } },
-      ];
+      q.fechaInicio = { $lt: new Date(fin) };
+      q.fechaFin = { $gt: new Date(inicio) };
     }
-    const docs = await Tutoria.find(q).sort({ fechaInicio: 1 }).limit(100);
+    const docs = await Tutoria.find(q)
+      .populate("profesor", "name email")
+      .populate("estudiante", "name email")
+      .sort({ fechaInicio: 1 })
+      .limit(100);
     res.json(docs);
   } catch (err) {
     res.status(500).json({ error: err.message });

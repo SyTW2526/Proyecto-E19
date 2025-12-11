@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-function Calendario() {
+function Calendario({ user }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('month'); // 'month' o 'day'
   const [eventos, setEventos] = useState([]);
@@ -13,14 +13,31 @@ function Calendario() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  // Obtener usuario actual del localStorage
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  // Obtener uid del usuario recibido por props o localStorage como fallback
+  const currentUser = user || JSON.parse(localStorage.getItem('user') || '{}');
+  const uid = currentUser._id || currentUser.id;
+
+  // API helper
+  const API_BASE = 'http://localhost:4000';
+  const fetchApi = (path, opts = {}) => {
+    const p = path.startsWith('/') ? path : `/${path}`;
+    const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+    return fetch(`${API_BASE}${p}`, { ...opts, headers });
+  };
 
   useEffect(() => {
-    fetchCalendarData();
-  }, [currentDate, viewMode]);
+    if (uid) {
+      fetchCalendarData();
+    }
+  }, [currentDate, viewMode, uid]);
 
   const fetchCalendarData = async () => {
+    if (!uid) {
+      console.warn('⚠️ No hay usuario disponible, esperando...');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       let startDate, endDate;
@@ -40,24 +57,54 @@ function Calendario() {
         endDate.setHours(23, 59, 59, 999);
       }
 
-      const [eventosRes, tutoriasRes] = await Promise.all([
-        axios.get(`http://localhost:4000/api/eventos`, {
-          params: {
-            owner: user._id,
-            start: startDate.toISOString(),
-            end: endDate.toISOString()
-          }
-        }),
-        axios.get(`http://localhost:4000/api/tutorias`, {
-          params: user.rol === 'profesor' ? { profesor: user._id } : { estudiante: user._id },
-        })
-      ]);
+      // Obtener eventos
+      let eventosData = [];
+      try {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const eventosRes = await fetchApi(`/api/eventos?owner=${uid}&start=${startOfMonth.toISOString()}&end=${endOfMonth.toISOString()}`);
+        if (eventosRes.ok) {
+          eventosData = await eventosRes.json();
+        }
+      } catch (err) {
+        console.error('Error cargando eventos:', err);
+        eventosData = [];
+      }
 
-      setEventos(eventosRes.data);
-      setTutorias(tutoriasRes.data.filter(t => {
+      // Obtener tutorías 
+      let tutoriasData = [];
+      try {
+        let res = await fetchApi(`/api/usuarios/${encodeURIComponent(uid)}/tutorias?${currentUser.rol === 'profesor' ? 'profesor' : 'estudiante'}=${encodeURIComponent(uid)}`);
+        if (!res.ok) {
+          res = await fetchApi(`/api/horarios/reservas/${currentUser.rol === 'profesor' ? 'profesor' : 'alumno'}/${encodeURIComponent(uid)}`);
+        }
+        if (res.ok) {
+          const data = await res.json();
+          tutoriasData = Array.isArray(data) ? data : [];
+          console.log('✅ Tutorías cargadas:', tutoriasData.length, tutoriasData);
+        } else {
+          console.error('❌ Error en respuesta tutorías:', res.status, await res.text());
+        }
+      } catch (err) {
+        console.error('❌ Error cargando tutorías', err);
+        tutoriasData = [];
+      }
+
+      setEventos(eventosData);
+      
+      // Filtrar tutorías por rango de fechas
+      const tutoriasFiltradas = tutoriasData.filter(t => {
         const fecha = new Date(t.fechaInicio);
-        return fecha >= startDate && fecha <= endDate;
-      }));
+        const enRango = fecha >= startDate && fecha <= endDate;
+        if (!enRango) {
+          console.log('📅 Tutoría fuera de rango:', t.tema, formatDate(fecha), 'vs', formatDate(startDate), '-', formatDate(endDate));
+        }
+        return enRango;
+      });
+      
+      console.log(`📊 Tutorías en rango (${formatDate(startDate)} - ${formatDate(endDate)}):`, tutoriasFiltradas.length, 'de', tutoriasData.length);
+      setTutorias(tutoriasFiltradas);
 
       setLoading(false);
     } catch (error) {

@@ -20,6 +20,7 @@ router.get('/', async (req, res) => {
   }
 });
 
+
 // POST /api/horarios
 router.post('/', async (req, res) => {
   try {
