@@ -1,19 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigation } from '../contexts/NavigationContext';
-import axios from 'axios';
 import Icon from '../components/Icon';
 
-function DashboardMain({ menu, activeSubsection }) {
+function DashboardMain({ menu, activeSubsection, user }) {
   const item = menu.find((m) => m.id === activeSubsection) || {};
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
   const { navigateToSection } = useNavigation();
-  
+
+  // API base
+  const API_BASE = 'http://localhost:4000';
+  const fetchApi = (path, opts = {}) => {
+    const p = path.startsWith('/') ? path : `/${path}`;
+    const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+    return fetch(`${API_BASE}${p}`, { ...opts, headers });
+  };
+
   const [tutorias, setTutorias] = useState([]);
   const [reservas, setReservas] = useState([]);
   const [eventos, setEventos] = useState([]);
   const [profesores, setProfesores] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedWeek, setSelectedWeek] = useState(0); // 0 = semana actual
+  const [selectedWeek, setSelectedWeek] = useState(0);
 
   useEffect(() => {
     fetchDashboardData();
@@ -22,60 +28,75 @@ function DashboardMain({ menu, activeSubsection }) {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      const uid = user && (user._id || user.id);
+      if (!uid) {
+        setLoading(false);
+        return;
+      }
 
       // Obtener tutorías
-      let tutoriasRes;
-      if (user.rol === 'profesor') {
-        try {
-          tutoriasRes = await axios.get(`http://localhost:4000/api/tutorias`, {
-            params: { profesor: user._id }
-          });
-        } catch {
-          tutoriasRes = await axios.get(`http://localhost:4000/api/horarios/reservas/profesor/${user._id}`);
+      let tutoriasData = [];
+      try {
+        let res = await fetchApi(`/api/usuarios/${encodeURIComponent(uid)}/tutorias?${user.rol === 'profesor' ? 'profesor' : 'estudiante'}=${encodeURIComponent(uid)}`);
+        if (!res.ok) {
+          res = await fetchApi(`/api/horarios/reservas/${user.rol === 'profesor' ? 'profesor' : 'alumno'}/${encodeURIComponent(uid)}`);
         }
-      } else {
-        try {
-          tutoriasRes = await axios.get(`http://localhost:4000/api/tutorias`, {
-            params: { estudiante: user._id }
-          });
-        } catch {
-          tutoriasRes = await axios.get(`http://localhost:4000/api/horarios/reservas/alumno/${user._id}`);
+        if (res.ok) {
+          const data = await res.json();
+          tutoriasData = Array.isArray(data) ? data : [];
         }
+      } catch (err) {
+        console.error('Error cargando tutorías', err);
+        tutoriasData = [];
       }
 
       // Obtener eventos
-      const eventosRes = await axios.get(`http://localhost:4000/api/eventos`, {
-        params: {
-          owner: user._id,
-          start: startOfMonth.toISOString(),
-          end: endOfMonth.toISOString()
+      let eventosData = [];
+      try {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const eventosRes = await fetchApi(`/api/eventos?owner=${uid}&start=${startOfMonth.toISOString()}&end=${endOfMonth.toISOString()}`);
+        if (eventosRes.ok) {
+          eventosData = await eventosRes.json();
         }
-      });
+      } catch (err) {
+        console.error('Error cargando eventos:', err);
+        eventosData = [];
+      }
 
       // Obtener reservas de espacios
+      let reservasData = [];
       try {
-        const reservasRes = await axios.get(`http://localhost:4000/api/recursos/reservas`, {
-          params: { usuario: user._id }
+        const reservasRes = await fetch('http://localhost:4000/api/recursos/mis-reservas', { 
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' }
         });
-        setReservas(reservasRes.data || []);
-      } catch {
-        setReservas([]);
+        if (reservasRes.ok) {
+          reservasData = await reservasRes.json();
+        }
+      } catch (err) {
+        console.error('Error cargando reservas:', err);
+        reservasData = [];
       }
 
-      // Obtener todos los usuarios y filtrar profesores
+      // Obtener profesores
+      let profesoresData = [];
       try {
-        const usuariosRes = await axios.get(`http://localhost:4000/api/usuarios`);
-        const profesoresData = usuariosRes.data.filter(u => u.rol === 'profesor');
-        setProfesores(profesoresData);
-      } catch {
-        setProfesores([]);
+        const usuariosRes = await fetchApi(`/api/usuarios`);
+        if (usuariosRes.ok) {
+          const usuarios = await usuariosRes.json();
+          profesoresData = usuarios.filter(u => u.rol === 'profesor');
+        }
+      } catch (err) {
+        console.error('Error cargando profesores:', err);
+        profesoresData = [];
       }
 
-      setTutorias(tutoriasRes.data || []);
-      setEventos(eventosRes.data || []);
+      setTutorias(tutoriasData || []);
+      setEventos(eventosData || []);
+      setReservas(reservasData || []);
+      setProfesores(profesoresData || []);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -102,10 +123,11 @@ function DashboardMain({ menu, activeSubsection }) {
   const getTutoriasEstaSemana = () => {
     const now = new Date();
     const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay() + 1 + (selectedWeek * 7)); // Lunes
+    startOfWeek.setDate(now.getDate() - now.getDay() + 1 + (selectedWeek * 7));
+    startOfWeek.setHours(0, 0, 0, 0);
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
-    endOfWeek.setHours(23, 59, 59);
+    endOfWeek.setHours(23, 59, 59, 999);
 
     return tutorias.filter(t => {
       const fecha = new Date(t.fechaInicio);
@@ -119,7 +141,7 @@ function DashboardMain({ menu, activeSubsection }) {
     const activity = days.map((day, index) => {
       const count = weekTutorias.filter(t => {
         const fecha = new Date(t.fechaInicio);
-        const dayOfWeek = (fecha.getDay() + 6) % 7; // Lunes = 0
+        const dayOfWeek = (fecha.getDay() + 6) % 7;
         return dayOfWeek === index;
       }).length;
       return { day, count };
@@ -128,6 +150,7 @@ function DashboardMain({ menu, activeSubsection }) {
   };
 
   const formatDate = (date) => {
+    if (!date) return '';
     return new Date(date).toLocaleDateString('es-ES', {
       day: 'numeric',
       month: 'short'
@@ -135,6 +158,7 @@ function DashboardMain({ menu, activeSubsection }) {
   };
 
   const formatTime = (date) => {
+    if (!date) return '';
     return new Date(date).toLocaleTimeString('es-ES', {
       hour: '2-digit',
       minute: '2-digit'
@@ -167,8 +191,13 @@ function DashboardMain({ menu, activeSubsection }) {
     startOfWeek.setDate(now.getDate() - now.getDay() + 1 + (selectedWeek * 7));
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
-    
     return `Semana ${startOfWeek.getDate()}-${endOfWeek.getDate()} ${startOfWeek.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}`;
+  };
+
+  const personLabel = (p) => {
+    if (!p) return 'Sin asignar';
+    if (typeof p === 'object') return p.name || p.email || 'Usuario';
+    return p;
   };
 
   if (loading) {
@@ -197,12 +226,10 @@ function DashboardMain({ menu, activeSubsection }) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Columna izquierda */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Asignaturas / Guías */}
+          {/* Asignaturas */}
           <div className="bg-white rounded-lg p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900">
-                {user.rol === 'profesor' ? 'Asignaturas' : 'Asignaturas'}
-              </h2>
+              <h2 className="text-lg font-bold text-gray-900">Asignaturas</h2>
               <span className="text-sm text-gray-500">2025-26</span>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -260,9 +287,9 @@ function DashboardMain({ menu, activeSubsection }) {
                   <div key={idx} className="flex items-center justify-between p-3 border rounded-lg">
                     <div>
                       <div className="text-sm font-medium">{reserva.recurso?.nombre || 'Espacio'}</div>
-                      <div className="text-xs text-gray-500">{formatDate(reserva.fechaInicio)}</div>
+                      <div className="text-xs text-gray-500">{formatDate(reserva.fechaReserva)}</div>
                     </div>
-                    <span className="text-xs text-gray-500">{formatTime(reserva.fechaInicio)}</span>
+                    <span className="text-xs text-gray-500">{formatTime(reserva.fechaReserva)}</span>
                   </div>
                 ))}
               </div>
@@ -305,8 +332,8 @@ function DashboardMain({ menu, activeSubsection }) {
                   <div className="flex-1">
                     <div className="text-sm font-medium">
                       {user.rol === 'profesor' 
-                        ? (tutoria.estudiante?.name || 'Estudiante')
-                        : (tutoria.profesor?.name || 'Profesor')}
+                        ? personLabel(tutoria.estudiante)
+                        : personLabel(tutoria.profesor)}
                     </div>
                   </div>
                   <div className="text-sm text-gray-600">
@@ -392,10 +419,10 @@ function DashboardMain({ menu, activeSubsection }) {
             </div>
           </div>
 
-          {/* Eventos */}
+          {/* Horario Clase */}
           <div className="bg-white rounded-lg p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900">Eventos</h2>
+              <h2 className="text-lg font-bold text-gray-900">Horario Clase</h2>
               <span className="text-sm text-gray-500">
                 Hoy, {new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
               </span>
@@ -431,6 +458,28 @@ function DashboardMain({ menu, activeSubsection }) {
                   className={`w-2 h-2 rounded-full ${dot === 0 ? 'bg-purple-600' : 'bg-gray-300'}`}
                 ></div>
               ))}
+            </div>
+          </div>
+
+          {/* Guías Docentes */}
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+            <div className="mb-4">
+              <h2 className="text-lg font-bold text-gray-900">Guías Docentes</h2>
+              <p className="text-sm text-gray-500">25-26</p>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                <Icon name="file-text" className="w-4 h-4 text-gray-400" />
+                <span>13926652 - Sistemas y Tecnologías...</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Icon name="file-text" className="w-4 h-4 text-gray-400" />
+                <span>13926904 - Robótica Computacional</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Icon name="file-text" className="w-4 h-4 text-gray-400" />
+                <span>13926902 - Visión por Computador</span>
+              </div>
             </div>
           </div>
 
