@@ -125,7 +125,7 @@ function Dashboard({ user }) {
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8">
               {/* Contenido por sección: cada sección tiene su propio componente */}
               {currentSection === 'dashboard' && (
-                <DashboardMain menu={menu} activeSubsection={activeSubsection} />
+                <DashboardMain menu={menu} activeSubsection={activeSubsection} user={user} />
               )}
               {currentSection === 'tutorias' && (
                 <TutoriasPage menu={menu} activeSubsection={activeSubsection} user={user} />

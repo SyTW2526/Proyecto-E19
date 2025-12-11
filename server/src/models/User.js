@@ -12,7 +12,8 @@ const UserSchema = new Schema({
     default: "alumno"
   },
   telefono: { type: String, trim: true },
-  avatarUrl: { type: String, trim: true },
+  asignaturasCursadas: [{ type: String, trim: true }], // array de asignaturas cursadas por código o nombre
+  avatarUrl: { type: String },
   biography: { type: String, trim: true, maxlength: 1000 }, // biografía opcional
   activo: { type: Boolean, default: true },
   meta: { type: Schema.Types.Mixed } // campo libre para datos adicionales (p.ej. { especialidad: 'Matemáticas' })

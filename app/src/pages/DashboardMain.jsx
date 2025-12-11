@@ -3,15 +3,15 @@ import { useNavigation } from '../contexts/NavigationContext';
 import axios from 'axios';
 import Icon from '../components/Icon';
 
-function DashboardMain({ menu, activeSubsection }) {
+function DashboardMain({ menu, activeSubsection, user }) {
   const item = menu.find((m) => m.id === activeSubsection) || {};
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
   const { navigateToSection } = useNavigation();
   
   const [tutorias, setTutorias] = useState([]);
   const [reservas, setReservas] = useState([]);
   const [eventos, setEventos] = useState([]);
   const [profesores, setProfesores] = useState([]);
+  const [asignaturas, setAsignaturas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedWeek, setSelectedWeek] = useState(0); // 0 = semana actual
 
@@ -22,6 +22,16 @@ function DashboardMain({ menu, activeSubsection }) {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      
+      // Verificar que tengamos un ID de usuario válido
+      if (!user || (!user._id && !user.id)) {
+        console.error('No se encontró ID de usuario válido');
+        setLoading(false);
+        return;
+      }
+      
+      const userId = user._id || user.id;
+      
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -31,25 +41,25 @@ function DashboardMain({ menu, activeSubsection }) {
       if (user.rol === 'profesor') {
         try {
           tutoriasRes = await axios.get(`http://localhost:4000/api/tutorias`, {
-            params: { profesor: user._id }
+            params: { profesor: userId }
           });
         } catch {
-          tutoriasRes = await axios.get(`http://localhost:4000/api/horarios/reservas/profesor/${user._id}`);
+          tutoriasRes = await axios.get(`http://localhost:4000/api/horarios/reservas/profesor/${userId}`);
         }
       } else {
         try {
           tutoriasRes = await axios.get(`http://localhost:4000/api/tutorias`, {
-            params: { estudiante: user._id }
+            params: { estudiante: userId }
           });
         } catch {
-          tutoriasRes = await axios.get(`http://localhost:4000/api/horarios/reservas/alumno/${user._id}`);
+          tutoriasRes = await axios.get(`http://localhost:4000/api/horarios/reservas/alumno/${userId}`);
         }
       }
 
       // Obtener eventos
       const eventosRes = await axios.get(`http://localhost:4000/api/eventos`, {
         params: {
-          owner: user._id,
+          owner: userId,
           start: startOfMonth.toISOString(),
           end: endOfMonth.toISOString()
         }
@@ -58,7 +68,7 @@ function DashboardMain({ menu, activeSubsection }) {
       // Obtener reservas de espacios
       try {
         const reservasRes = await axios.get(`http://localhost:4000/api/recursos/reservas`, {
-          params: { usuario: user._id }
+          params: { usuario: userId }
         });
         setReservas(reservasRes.data || []);
       } catch {
@@ -72,6 +82,17 @@ function DashboardMain({ menu, activeSubsection }) {
         setProfesores(profesoresData);
       } catch {
         setProfesores([]);
+      }
+
+      // Obtener asignaturas del usuario actual
+      try {
+        const userRes = await axios.get(`http://localhost:4000/api/usuarios/${userId}`);
+        console.log('Usuario obtenido:', userRes.data);
+        console.log('Asignaturas cursadas:', userRes.data.asignaturasCursadas);
+        setAsignaturas(userRes.data.asignaturasCursadas || []);
+      } catch (error) {
+        console.error('Error obteniendo asignaturas del usuario:', error);
+        setAsignaturas([]);
       }
 
       setTutorias(tutoriasRes.data || []);
@@ -201,28 +222,40 @@ function DashboardMain({ menu, activeSubsection }) {
           <div className="bg-white rounded-lg p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-gray-900">
-                {user.rol === 'profesor' ? 'Asignaturas' : 'Asignaturas'}
+                {user.rol === 'profesor' ? 'Asignaturas Impartidas' : 'Asignaturas Cursadas'}
               </h2>
               <span className="text-sm text-gray-500">2025-26</span>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                <span className="text-sm font-medium">Robótica Computacional</span>
-                <Icon name="chevron-right" className="w-4 h-4 text-gray-400" />
+            {asignaturas.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {asignaturas.slice(0, 6).map((asignatura, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                    <span className="text-sm font-medium text-gray-800 truncate">{asignatura}</span>
+                    <Icon name="book" className="w-4 h-4 text-violet-600 flex-shrink-0 ml-2" />
+                  </div>
+                ))}
               </div>
-              <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                <span className="text-sm font-medium">Sistemas y Tecnologías Web</span>
-                <Icon name="chevron-right" className="w-4 h-4 text-gray-400" />
+            ) : (
+              <div className="text-center py-8">
+                <Icon name="book" className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-sm text-gray-500">
+                  {user.rol === 'profesor' 
+                    ? 'No has añadido asignaturas que impartes'
+                    : 'No has añadido asignaturas cursadas'}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">Ve a tu perfil para añadir asignaturas</p>
               </div>
-              <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                <span className="text-sm font-medium">Visión por computador</span>
-                <Icon name="chevron-right" className="w-4 h-4 text-gray-400" />
+            )}
+            {asignaturas.length > 6 && (
+              <div className="mt-3 text-center">
+                <button 
+                  onClick={() => window.location.href = '/perfil'}
+                  className="text-sm text-violet-600 hover:text-violet-700 font-medium"
+                >
+                  Ver todas las asignaturas ({asignaturas.length})
+                </button>
               </div>
-              <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                <span className="text-sm font-medium">Gestión del conocimiento...</span>
-                <Icon name="chevron-right" className="w-4 h-4 text-gray-400" />
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Próximos Eventos */}
