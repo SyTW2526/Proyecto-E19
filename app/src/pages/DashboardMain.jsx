@@ -94,10 +94,14 @@ function DashboardMain({ menu, activeSubsection, user }) {
         profesoresData = [];
       }
 
+      // Obtener asignaturas del usuario
+      const userAsignaturas = user?.asignaturasCursadas || [];
+
       setTutorias(tutoriasData || []);
       setEventos(eventosData || []);
       setReservas(reservasData || []);
       setProfesores(profesoresData || []);
+      setAsignaturas(userAsignaturas);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
