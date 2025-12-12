@@ -17,8 +17,45 @@ const TutoriaSchema = new Schema({
   timestamps: true
 });
 
-TutoriaSchema.index({ profesor: 1, fechaInicio: 1 });
-TutoriaSchema.index({ estudiante: 1, fechaInicio: 1 });
-TutoriaSchema.index({ fechaInicio: 1, fechaFin: 1 });
+// Añadir índices compuestos para mejorar las queries
+TutoriaSchema.index({ profesor: 1, fechaInicio: -1 });
+TutoriaSchema.index({ estudiante: 1, fechaInicio: -1 });
+TutoriaSchema.index({ fechaInicio: 1, estado: 1 });
+TutoriaSchema.index({ estado: 1, fechaInicio: 1 });
+
+// Métodos estáticos optimizados
+TutoriaSchema.statics.findByProfesorOptimized = function(profesorId, limit = 10) {
+  return this.find({ profesor: profesorId })
+    .select('tema fechaInicio fechaFin estado modalidad')
+    .sort({ fechaInicio: -1 })
+    .limit(limit)
+    .lean();
+};
+
+TutoriaSchema.statics.findByEstudianteOptimized = function(estudianteId, limit = 10) {
+  return this.find({ estudiante: estudianteId })
+    .select('tema fechaInicio fechaFin estado modalidad profesor')
+    .populate('profesor', 'name email')
+    .sort({ fechaInicio: -1 })
+    .limit(limit)
+    .lean();
+};
+
+TutoriaSchema.statics.countByProfesor = function(profesorId) {
+  return this.countDocuments({ profesor: profesorId });
+};
+
+TutoriaSchema.statics.findUpcoming = function(userId, userRole, limit = 10) {
+  const now = new Date();
+  const query = userRole === 'profesor' 
+    ? { profesor: userId, fechaInicio: { $gte: now }, estado: { $ne: 'cancelada' } }
+    : { estudiante: userId, fechaInicio: { $gte: now }, estado: { $ne: 'cancelada' } };
+  
+  return this.find(query)
+    .select('tema fechaInicio fechaFin estado modalidad lugar')
+    .sort({ fechaInicio: 1 })
+    .limit(limit)
+    .lean();
+};
 
 export default model("Tutoria", TutoriaSchema);

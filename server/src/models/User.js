@@ -20,9 +20,26 @@ const UserSchema = new Schema({
   timestamps: true
 });
 
-// Índices para mejorar rendimiento
-UserSchema.index({ email: 1 });
+// OPTIMIZACIONES: Añadir índices para queries frecuentes
+UserSchema.index({ email: 1 }, { unique: true });
 UserSchema.index({ rol: 1, activo: 1 });
-UserSchema.index({ name: 1 });
+UserSchema.index({ activo: 1 });
+
+// Excluir password por defecto en todas las queries
+UserSchema.set('toJSON', {
+  transform: function(doc, ret) {
+    delete ret.password;
+    delete ret.__v;
+    return ret;
+  }
+});
+
+// Método para buscar usuarios activos por rol (optimizado)
+UserSchema.statics.findActiveByRole = function(role, limit = 50) {
+  return this.find({ rol: role, activo: true })
+    .select('-password')
+    .limit(limit)
+    .lean();
+};
 
 export default model("User", UserSchema);
