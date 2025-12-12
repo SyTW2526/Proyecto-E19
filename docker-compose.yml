@@ -7,8 +7,21 @@ services:
       - "4000:4000"
     volumes:
       - ./server:/app:delegated
-      - /src/node_modules
+      - /app/node_modules
+    environment:
+      - MONGO_URI=mongodb+srv://Usuario:123456789.@tutorias.g016u4i.mongodb.net/?retryWrites=true&w=majority
+      - NODE_ENV=development
+      - JWT_SECRET=${JWT_SECRET:-fec8de3d29e86389bf3ea41fd948f327b306e6f4657c8b807d1036e774f5fe9037f1ceef00cf9e434ea45ab5cb002aad335412d2f92613c906d26117dbebf607}
+      - PORT=4000
+      - FRONTEND_URL=http://localhost:5173
     command: npm run dev
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/api/"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 40s
 
   frontend:
     # Use a lightweight Node image for development with Vite running inside the container.
@@ -18,20 +31,18 @@ services:
       - ./app:/app:delegated
       - /app/node_modules
     ports:
-      - "5173:5173"    # Exponer Vite dev server al host
+      - "5173:5173"
     environment:
       - BACKEND_URL=http://app:4000
       - IN_DOCKER=1
-      # Opcionales para HMR si hay problemas: ajusta según plataforma
       - HMR_HOST=localhost
       - HMR_PORT=5173
     depends_on:
-      - app
+      app:
+        condition: service_healthy
     command: sh -c "npm install --silent && npm run dev"
     restart: unless-stopped
 
-  # Optional: a production frontend service that builds and serves static files with nginx.
-  # Keep it separate from the dev frontend above.
   frontend-prod:
     build:
       context: ./app
@@ -41,3 +52,5 @@ services:
     depends_on:
       - app
     restart: unless-stopped
+    profiles:
+      - production

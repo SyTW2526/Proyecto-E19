@@ -75,7 +75,8 @@ function Calendario({ user }) {
       // Obtener tutorías 
       let tutoriasData = [];
       try {
-        let res = await fetchApi(`/api/usuarios/${encodeURIComponent(uid)}/tutorias?${currentUser.rol === 'profesor' ? 'profesor' : 'estudiante'}=${encodeURIComponent(uid)}`);
+        const rol = currentUser.rol === 'profesor' ? 'profesor' : 'estudiante';
+        let res = await fetchApi(`/api/tutorias?${rol}=${encodeURIComponent(uid)}`);
         if (!res.ok) {
           res = await fetchApi(`/api/horarios/reservas/${currentUser.rol === 'profesor' ? 'profesor' : 'alumno'}/${encodeURIComponent(uid)}`);
         }
@@ -87,7 +88,7 @@ function Calendario({ user }) {
           console.error('❌ Error en respuesta tutorías:', res.status, await res.text());
         }
       } catch (err) {
-        console.error('❌ Error cargando tutorías', err);
+        console.error('Error cargando tutorías:', err);
         tutoriasData = [];
       }
 
