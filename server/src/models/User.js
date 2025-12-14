@@ -3,24 +3,26 @@ const { Schema, model } = mongoose;
 
 const UserSchema = new Schema({
   name: { type: String, required: true, trim: true, maxlength: 100 },
-  fullName: { type: String, trim: true, maxlength: 200 }, // nombre completo opcional
+  fullName: { type: String, trim: true, maxlength: 200 },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-  password: { type: String, required: true }, // se recomienda encriptarla antes de guardar
+  password: { type: String, required: true },
   rol: {
     type: String,
     enum: ["alumno", "profesor", "desarrollador"],
     default: "alumno"
   },
   telefono: { type: String, trim: true },
-  asignaturasCursadas: [{ type: String, trim: true }], // array de asignaturas cursadas por código o nombre
-  avatarUrl: { type: String },
-  biography: { type: String, trim: true, maxlength: 1000 }, // biografía opcional
+  avatarUrl: { type: String, trim: true },
+  biography: { type: String, trim: true, maxlength: 1000 },
   activo: { type: Boolean, default: true },
-  meta: { type: Schema.Types.Mixed } // campo libre para datos adicionales (p.ej. { especialidad: 'Matemáticas' })
+  asignaturasCursadas: { type: [String], default: [] },
 }, {
   timestamps: true
 });
 
-// UserSchema.index({ email: 1 });
+// Índices para mejorar rendimiento
+UserSchema.index({ email: 1 });
+UserSchema.index({ rol: 1, activo: 1 });
+UserSchema.index({ name: 1 });
 
 export default model("User", UserSchema);

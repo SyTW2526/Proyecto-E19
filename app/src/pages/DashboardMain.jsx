@@ -38,7 +38,8 @@ function DashboardMain({ menu, activeSubsection, user }) {
       // Obtener tutorías
       let tutoriasData = [];
       try {
-        let res = await fetchApi(`/api/usuarios/${encodeURIComponent(uid)}/tutorias?${user.rol === 'profesor' ? 'profesor' : 'estudiante'}=${encodeURIComponent(uid)}`);
+        const rol = user.rol === 'profesor' ? 'profesor' : 'estudiante';
+        let res = await fetchApi(`/api/tutorias?${rol}=${encodeURIComponent(uid)}`);
         if (!res.ok) {
           res = await fetchApi(`/api/horarios/reservas/${user.rol === 'profesor' ? 'profesor' : 'alumno'}/${encodeURIComponent(uid)}`);
         }
