@@ -116,4 +116,4 @@ app.use("/api/recursos", recursoRouter);
 app.use("/api/horarios", tutoriasRouter);
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
+app.listen(PORT, "0.0.0.0", () => console.log(`Servidor corriendo en puerto ${PORT}`));
