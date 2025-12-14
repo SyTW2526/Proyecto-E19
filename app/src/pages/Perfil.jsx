@@ -118,7 +118,7 @@ function Perfil({ user }) {
   const API_BASE =
     (typeof window !== 'undefined' && (window.__API_BASE__ || window.localStorage.getItem('API_BASE'))) ||
     (typeof process !== 'undefined' && (process.env && (process.env.REACT_APP_API_BASE || process.env.VITE_API_BASE))) ||
-    'http://proyecto-e19.onrender.com';
+    'https://proyecto-e19.onrender.com';
 
   const fetchApi = (path, opts = {}) => {
     const p = path.startsWith('/') ? path : `/${path}`;

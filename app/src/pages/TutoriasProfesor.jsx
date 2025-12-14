@@ -255,7 +255,7 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
   const API_BASE = (
     (typeof window !== 'undefined' && (window.__API_BASE__ || window.localStorage.getItem('API_BASE'))) ||
     (typeof process !== 'undefined' && (process.env && (process.env.REACT_APP_API_BASE || process.env.VITE_API_BASE))) ||
-    'http://localhost:5173'
+    'https://localhost:5173'
   );
   const fetchApi = (path, opts = {}) => {
     const p = path.startsWith('/') ? path : `/${path}`;

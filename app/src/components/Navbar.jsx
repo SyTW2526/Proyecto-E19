@@ -13,7 +13,7 @@ const Navbar = ({user, setUser}) => {
   const closeTimeoutRef = useRef(null);
 
   const handleLogout = async () => {
-      await axios.post("http://proyecto-e19.onrender.com/api/auth/logout");
+      await axios.post("https://proyecto-e19.onrender.com/api/auth/logout");
       setUser(null);
       navigate("/");
   };

@@ -55,7 +55,7 @@ function App() {
   useEffect(() => {
     const fetchUser = async() => {
       try {
-        const res = await axios.get("http://proyecto-e19.onrender.com/api/auth/me")
+        const res = await axios.get("https://proyecto-e19.onrender.com/api/auth/me")
         setUser(res.data);
       } catch(err) {
         setUser(null);
@@ -69,7 +69,7 @@ function App() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post("http://proyecto-e19.onrender.com/api/auth/login", form);
+      const res = await axios.post("https://proyecto-e19.onrender.com/api/auth/login", form);
       setUser(res.data);
     }  catch (err) {
       setError(err.response?.data?.message || "An error occurred");

@@ -20,7 +20,7 @@ function Calendario({ user }) {
   const uid = currentUser._id || currentUser.id;
 
   // API helper
-  const API_BASE = 'http://proyecto-e19.onrender.com';
+  const API_BASE = 'https://proyecto-e19.onrender.com';
   const fetchApi = (path, opts = {}) => {
     const p = path.startsWith('/') ? path : `/${path}`;
     const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
