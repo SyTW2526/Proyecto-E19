@@ -66,9 +66,9 @@ const mongooseOptions = {
   socketTimeoutMS: 60000, // Aumentado a 60s para evitar timeouts prematuros
   connectTimeoutMS: 30000, // Añadido timeout de conexión
   family: 4,
-  compressors: ['zlib'], // Solo zlib (viene incluido con Node.js)
-  retryWrites: true,
-  retryReads: true,
+  // compressors: ['zlib'], // Solo zlib (viene incluido con Node.js)
+  // retryWrites: true,
+  // retryReads: true,
   heartbeatFrequencyMS: 10000, // Añadido para mantener conexión viva
 };
 
