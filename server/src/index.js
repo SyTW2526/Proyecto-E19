@@ -111,6 +111,8 @@ app.get("/healthz", (req, res) => {
   res.status(200).send("OK");
 });
 
+
+
 app.use("/api/eventos", eventosRouter);
 app.use("/api/foros", forosRouter); 
 app.use("/api/threads", threadsRouter); 
