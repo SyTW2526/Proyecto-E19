@@ -1,5 +1,6 @@
 import React from 'react';
 import Icon from '../components/Icon';
+import { fetchApi } from '../config/api';
 
 function ReservaEspacios({ menu, activeSubsection }) {
   const item = menu.find((m) => m.id === activeSubsection) || {};
@@ -25,7 +26,7 @@ function ReservaEspacios({ menu, activeSubsection }) {
   const fetchSpaces = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/recursos', { credentials: 'include' });
+      const res = await fetchApi('/api/recursos', { credentials: 'include' });
       if (!res.ok) throw new Error(`Error ${res.status}`);
       const data = await res.json();
       setSpaces(data);
@@ -39,7 +40,7 @@ function ReservaEspacios({ menu, activeSubsection }) {
 
   const fetchReservationsFor = async (spaceId) => {
     try {
-      const res = await fetch(`/api/recursos/${spaceId}/reservas`, { credentials: 'include' });
+      const res = await fetchApi(`/api/recursos/${spaceId}/reservas`, { credentials: 'include' });
       if (!res.ok) throw new Error(`Error ${res.status}`);
       const data = await res.json();
       setReservas(data);
@@ -51,7 +52,7 @@ function ReservaEspacios({ menu, activeSubsection }) {
 
   const fetchMyReservas = async () => {
     try {
-      const res = await fetch('/api/recursos/mis-reservas', { credentials: 'include' });
+      const res = await fetchApi('/api/recursos/mis-reservas', { credentials: 'include' });
       if (!res.ok) {
         let body = null;
         try { body = await res.json(); } catch (e) { body = await res.text().catch(() => null); }
@@ -85,7 +86,7 @@ function ReservaEspacios({ menu, activeSubsection }) {
     try {
       setLoading(true);
       const body = { fechaReserva: new Date(inicio).toISOString() };
-      const res = await fetch(`/api/recursos/${selected._id}/reservas`, {
+      const res = await fetchApi(`/api/recursos/${selected._id}/reservas`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

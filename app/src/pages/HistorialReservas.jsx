@@ -1,4 +1,5 @@
 import React from 'react';
+import { fetchApi } from '../config/api';
 
 function HistorialReservas() {
   const [historialReservas, setHistorialReservas] = React.useState([]);
@@ -22,7 +23,7 @@ function HistorialReservas() {
     try {
       setLoading(true);
       setMessage(null);
-      const res = await fetch('/api/recursos/mis-reservas', { credentials: 'include' });
+      const res = await fetchApi('/api/recursos/mis-reservas', { credentials: 'include' });
       
       if (!res.ok) {
         let body = null;
