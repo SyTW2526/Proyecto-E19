@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slideDown {
+  animation: slideDown 0.3s ease-out;
+}
+
+/* Navbar brand/logo */
+.brand-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+}
+.nav-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgb(92, 6, 140);
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  margin-right: 10px;
+  font-size: 1.05rem;
+}
+.nav-title {
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.02em;
+}

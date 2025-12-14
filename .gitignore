@@ -1,0 +1,18 @@
+# Node.js
+server/node_modules/
+app/node_modules/
+
+# Coverage
+coverage/
+
+
+# Editor / OS
+.vscode/
+
+# Caches
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+.serverless/
+.turbo/

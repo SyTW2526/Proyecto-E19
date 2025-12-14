@@ -1,0 +1,8 @@
+
+dist
+.DS_Store
+.env
+.git
+npm-debug.log
+.vscode
+coverage

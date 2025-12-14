@@ -1,0 +1,93 @@
+name: Tests
+
+on:
+  push:
+    branches: [ "main", "feature/jose", "release" ]
+  pull_request:
+    branches: [ "main", "feature/jose", "release" ]
+
+jobs:
+  test-server:
+    name: Server Tests
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x]
+
+    steps:
+    - name: Cloning repo
+      uses: actions/checkout@v4
+      
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        
+    - name: Installing server dependencies
+      working-directory: ./server
+      run: npm ci
+      
+    - name: Running server tests
+      working-directory: ./server
+      run: npm test
+      env:
+        JWT_SECRET: test-secret-key-for-ci
+        NODE_ENV: test
+
+  test-frontend:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x]
+
+    steps:
+    - name: Cloning repo
+      uses: actions/checkout@v4
+      
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        
+    - name: Installing frontend dependencies
+      working-directory: ./app
+      run: npm ci
+      
+    - name: Building frontend
+      working-directory: ./app
+      run: npm run build
+      
+    # Opcional: Si más adelante añades tests en el frontend
+    # - name: Running frontend tests
+    #   working-directory: ./app
+    #   run: npm test
+
+  docker-build:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Cloning repo
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Build server image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./server
+        file: ./server/Dockerfile
+        push: false
+        tags: tutorias-server:test
+        
+    - name: Build frontend image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./app
+        file: ./app/Dockerfile
+        push: false
+        tags: tutorias-frontend:test
