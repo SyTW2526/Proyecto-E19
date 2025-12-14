@@ -251,20 +251,6 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
 
   const reservasStorageKey = () => 'local_reservas';
 
-  // API base (ajustable via env o localStorage). Por defecto http://proyecto-e19.onrender.com (backend)
-  const API_BASE = (
-    (typeof window !== 'undefined' && (window.__API_BASE__ || window.localStorage.getItem('API_BASE'))) ||
-    (typeof process !== 'undefined' && (process.env && (process.env.REACT_APP_API_BASE || process.env.VITE_API_BASE))) ||
-    'https://localhost:5173'
-  );
-  const fetchApi = (path, opts = {}) => {
-    const p = path.startsWith('/') ? path : `/${path}`;
-    // no 'credentials' by default to avoid CORS preflight cancellations when backend
-    // doesn't accept cookies. Add default JSON header, merged with any opts.headers.
-    const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
-    return fetch(`${API_BASE}${p}`, { ...opts, headers });
-  };
-
   // helper para obtener id de usuario actual (ajusta si tu auth difiere)
   const getCurrentUserId = () => {
     // Preferir user pasado por props (user._id | user.id), fallback a localStorage

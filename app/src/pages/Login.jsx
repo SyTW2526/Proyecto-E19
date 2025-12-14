@@ -2,6 +2,7 @@ import React, { useState, useEffect  } from 'react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useImage } from '../components/ImageContext';
+import { getApiUrl } from '../config/api';
 
 const Login = ({ setUser }) => {
     const navigate = useNavigate();
@@ -62,7 +63,7 @@ const Login = ({ setUser }) => {
 
     setLoading(true);
     try {
-      const res = await axios.post("https://proyecto-e19.onrender.com/api/auth/login", form);
+      const res = await axios.post(getApiUrl('/api/auth/login'), form);
       setUser(res.data.user);
       navigate("/dashboard");
     } catch (err) {

@@ -2,6 +2,7 @@
   import axios from 'axios';
   import { useNavigate } from 'react-router-dom';
   import { useImage } from '../components/ImageContext';
+  import { getApiUrl } from '../config/api';
 
   const Register = ({ setUser }) => {
     const [form, setForm] = useState({ name: "", email: "", password: "" });
@@ -50,7 +51,7 @@
       }
       setLoading(true);
       try {
-        const res = await axios.post("https://proyecto-e19.onrender.com/api/auth/register", form);
+        const res = await axios.post(getApiUrl('/api/auth/register'), form);
         setUser(res.data.user);
         // enviar un estado al Login para que muestre el cartel de registro correcto
         navigate("/login", { state: { registered: true } });

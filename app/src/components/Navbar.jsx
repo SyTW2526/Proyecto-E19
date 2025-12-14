@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { getApiUrl } from '../config/api';
 
 const Navbar = ({user, setUser}) => {
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ const Navbar = ({user, setUser}) => {
   const closeTimeoutRef = useRef(null);
 
   const handleLogout = async () => {
-      await axios.post("https://proyecto-e19.onrender.com/api/auth/logout");
+      await axios.post(getApiUrl('/api/auth/logout'));
       setUser(null);
       navigate("/");
   };

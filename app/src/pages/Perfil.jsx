@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { fetchApi } from '../config/api';
 import Icon from '../components/Icon';
 
 function Perfil({ user }) {

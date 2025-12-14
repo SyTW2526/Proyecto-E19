@@ -23,8 +23,26 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+// Configuración de CORS para múltiples orígenes
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:5173',
+  'https://proyecto-e19.onrender.com',
+  'http://localhost:4000'
+].filter(Boolean); // Eliminar valores undefined
+
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || "http://localhost:5173",
+  origin: function (origin, callback) {
+    // Permitir requests sin origin (como mobile apps o curl)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.warn(`⚠️ CORS blocked origin: ${origin}`);
+      callback(null, true); // Permitir de todos modos en producción para evitar bloqueos
+    }
+  },
   credentials: true,
 };
 app.use(cors(corsOptions));

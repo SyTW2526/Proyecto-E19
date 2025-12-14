@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { useNavigation } from '../contexts/NavigationContext';
+import { getApiUrl } from '../config/api';
 
 const DashboardNavbar = ({ user, setUser }) => {
   const navigate = useNavigate();
@@ -11,7 +12,7 @@ const DashboardNavbar = ({ user, setUser }) => {
   const { currentSection, navigateToSection } = useNavigation();
 
   const handleLogout = async () => {
-    await axios.post("https://proyecto-e19.onrender.com/api/auth/logout");
+    await axios.post(getApiUrl('/api/auth/logout'));
     setUser(null);
     navigate("/");
   };

@@ -1,19 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Icon from '../components/Icon';
+import { fetchApi } from '../config/api';
 
 function TutoriasAlumno({ menu, activeSubsection, user }) {
   const item = (menu || []).find((m) => m.id === activeSubsection) || {};
-
-  // API base (ajustable). Por defecto apunta al backend.
-  const API_BASE =
-    (typeof window !== 'undefined' && (window.__API_BASE__ || window.localStorage.getItem('API_BASE'))) ||
-    (typeof process !== 'undefined' && (process.env && (process.env.REACT_APP_API_BASE || process.env.VITE_API_BASE))) ||
-    'https://proyecto-e19.onrender.com';
-  const fetchApi = (path, opts = {}) => {
-    const p = path.startsWith('/') ? path : `/${path}`;
-    const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
-    return fetch(`${API_BASE}${p}`, { ...opts, headers });
-  };
 
   const [profesores, setProfesores] = useState([]); // [{ id, name, horarios: [] }, ...]
   const [loading, setLoading] = useState(false);
