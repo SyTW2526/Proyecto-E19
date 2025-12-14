@@ -31,7 +31,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
-app.use(express.static("/app_static"));
+// app.use(express.static("/app_static"));
 
 // Configuración optimizada de MongoDB
 mongoose.set('strictQuery', false);
