@@ -11,7 +11,7 @@ import Calendario from './Calendario';
 
 function Dashboard({ user }) {
   const navigate = useNavigate();
-  const { currentSection, activeSubsection, navigateToSubsection, getCurrentMenu, getQuickAccess } = useNavigation();
+  const { currentSection, activeSubsection, navigateToSubsection, navigateToSection, getCurrentMenu, getQuickAccess } = useNavigation();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
   const menu = getCurrentMenu();
@@ -82,8 +82,8 @@ function Dashboard({ user }) {
               <button
                 key={item.id}
                 onClick={() => {
-                  if (item.section !== currentSection) {
-                    navigateToSubsection(item.id);
+                  if (item.section && item.section !== currentSection) {
+                    navigateToSection(item.section);
                   }
                   setSidebarOpen(false);
                 }}

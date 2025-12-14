@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigation } from '../contexts/NavigationContext';
 
 function Calendario({ user }) {
+  const { navigateToSection } = useNavigation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('month'); // 'month' o 'day'
   const [eventos, setEventos] = useState([]);
@@ -250,11 +252,11 @@ function Calendario({ user }) {
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold text-purple-700">Eventos y calendario</h1>
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => navigateToSection('tutorias', 'reservar')}
             className="bg-black text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-gray-800 flex items-center gap-2"
           >
             <span className="text-lg">+</span>
-            Crear evento
+            Crear tutoría
           </button>
         </div>
         

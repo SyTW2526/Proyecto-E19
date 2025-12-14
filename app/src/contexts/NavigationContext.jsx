@@ -30,9 +30,9 @@ const sidebarMenus = {
   ],
   calendario: [
     { id: 'mensual', label: 'Vista mensual', icon: 'calendar' },
-    { id: 'semanal', label: 'Vista semanal', icon: 'calendar' },
-    { id: 'diaria', label: 'Vista diaria', icon: 'calendar' },
-    { id: 'mis-eventos', label: 'Mis eventos', icon: 'book' },
+    // { id: 'semanal', label: 'Vista semanal', icon: 'calendar' },
+    // { id: 'diaria', label: 'Vista diaria', icon: 'calendar' },
+    // { id: 'mis-eventos', label: 'Mis eventos', icon: 'book' },
   ],
 };
 
@@ -49,12 +49,17 @@ export const NavigationProvider = ({ children }) => {
   const getCurrentMenu = () => sidebarMenus[currentSection] || [];
   const getQuickAccess = () => quickAccess;
 
-  const navigateToSection = (section) => {
+  const navigateToSection = (section, subsection = null) => {
     setCurrentSection(section);
-    // Al cambiar de sección, ir a la primera subsección
-    const menu = sidebarMenus[section];
-    if (menu && menu.length > 0) {
-      setActiveSubsection(menu[0].id);
+    // Si se proporciona una subsección específica, usarla
+    if (subsection) {
+      setActiveSubsection(subsection);
+    } else {
+      // Al cambiar de sección, ir a la primera subsección
+      const menu = sidebarMenus[section];
+      if (menu && menu.length > 0) {
+        setActiveSubsection(menu[0].id);
+      }
     }
   };
 
