@@ -7,7 +7,7 @@ function DashboardMain({ menu, activeSubsection, user }) {
   const { navigateToSection } = useNavigation();
 
   // API base
-  const API_BASE = 'http://localhost:4000';
+  const API_BASE = 'http://proyecto-e19.onrender.com';
   const fetchApi = (path, opts = {}) => {
     const p = path.startsWith('/') ? path : `/${path}`;
     const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
@@ -70,7 +70,7 @@ function DashboardMain({ menu, activeSubsection, user }) {
       // Obtener reservas de espacios
       let reservasData = [];
       try {
-        const reservasRes = await fetch('http://localhost:4000/api/recursos/mis-reservas', { 
+        const reservasRes = await fetch('http://proyecto-e19.onrender.com/api/recursos/mis-reservas', { 
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' }
         });

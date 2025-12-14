@@ -50,7 +50,7 @@
       }
       setLoading(true);
       try {
-        const res = await axios.post("http://localhost:4000/api/auth/register", form);
+        const res = await axios.post("http://proyecto-e19.onrender.com/api/auth/register", form);
         setUser(res.data.user);
         // enviar un estado al Login para que muestre el cartel de registro correcto
         navigate("/login", { state: { registered: true } });

@@ -11,7 +11,7 @@ const DashboardNavbar = ({ user, setUser }) => {
   const { currentSection, navigateToSection } = useNavigation();
 
   const handleLogout = async () => {
-    await axios.post("http://localhost:4000/api/auth/logout");
+    await axios.post("http://proyecto-e19.onrender.com/api/auth/logout");
     setUser(null);
     navigate("/");
   };

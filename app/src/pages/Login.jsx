@@ -62,7 +62,7 @@ const Login = ({ setUser }) => {
 
     setLoading(true);
     try {
-      const res = await axios.post("http://localhost:4000/api/auth/login", form);
+      const res = await axios.post("http://proyecto-e19.onrender.com/api/auth/login", form);
       setUser(res.data.user);
       navigate("/dashboard");
     } catch (err) {

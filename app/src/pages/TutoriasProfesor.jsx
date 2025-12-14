@@ -251,7 +251,7 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
 
   const reservasStorageKey = () => 'local_reservas';
 
-  // API base (ajustable via env o localStorage). Por defecto http://localhost:4000 (backend)
+  // API base (ajustable via env o localStorage). Por defecto http://proyecto-e19.onrender.com (backend)
   const API_BASE = (
     (typeof window !== 'undefined' && (window.__API_BASE__ || window.localStorage.getItem('API_BASE'))) ||
     (typeof process !== 'undefined' && (process.env && (process.env.REACT_APP_API_BASE || process.env.VITE_API_BASE))) ||
