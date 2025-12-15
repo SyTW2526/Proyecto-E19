@@ -8,10 +8,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Perfil from './pages/Perfil';
 import { NavigationProvider } from './contexts/NavigationContext';
-import axios from 'axios';
-import { getApiUrl } from './config/api';
-
-axios.defaults.withCredentials = true;
+import { fetchApi } from './config/api';
 
 function AppContent({ user, setUser, loading }) {
   const location = useLocation();

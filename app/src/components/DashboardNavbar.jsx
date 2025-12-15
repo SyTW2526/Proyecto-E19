@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios';
 import { useNavigation } from '../contexts/NavigationContext';
-import { getApiUrl } from '../config/api';
+import { fetchApi } from '../config/api';
 
 const DashboardNavbar = ({ user, setUser }) => {
   const navigate = useNavigate();

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useNavigation } from '../contexts/NavigationContext';
 import { fetchApi } from '../config/api';
 

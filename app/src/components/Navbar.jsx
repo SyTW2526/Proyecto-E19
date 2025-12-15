@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { getApiUrl } from '../config/api';
+import { fetchApi } from '../config/api';
 
 const Navbar = ({user, setUser}) => {
   const navigate = useNavigate();

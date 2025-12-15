@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { fetchApi } from '../config/api';
 
 function Home({ setUser }) {
   const navigate = useNavigate();

@@ -1,8 +1,7 @@
   import React, { useState, useEffect } from 'react'
-  import axios from 'axios';
   import { useNavigate } from 'react-router-dom';
   import { useImage } from '../components/ImageContext';
-  import { getApiUrl } from '../config/api';
+  import { fetchApi } from '../config/api';
 
   const Register = ({ setUser }) => {
     const [form, setForm] = useState({ name: "", email: "", password: "" });
