@@ -60,15 +60,15 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 const mongooseOptions = {
-  maxPoolSize: 10,
-  minPoolSize: 5, // Aumentado de 2 a 5 para mantener más conexiones activas
+  maxPoolSize: 3, // ⬇️ REDUCIDO: M0 tiene límite de ~50 conexiones totales
+  minPoolSize: 1, // ⬇️ REDUCIDO: mantener mínimo de conexiones bajo
   serverSelectionTimeoutMS: 30000, // Aumentado a 30s para dar más tiempo
   socketTimeoutMS: 60000, // Aumentado a 60s para evitar timeouts prematuros
   connectTimeoutMS: 30000, // Añadido timeout de conexión
   family: 4,
   // compressors: ['zlib'], // Solo zlib (viene incluido con Node.js)
-  // retryWrites: true,
-  // retryReads: true,
+  retryWrites: true, // ✅ Activado: reintentar escrituras fallidas
+  retryReads: true,  // ✅ Activado: reintentar lecturas fallidas
   heartbeatFrequencyMS: 10000, // Añadido para mantener conexión viva
 };
 

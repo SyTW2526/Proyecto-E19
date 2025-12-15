@@ -21,7 +21,7 @@ const UserSchema = new Schema({
 });
 
 // Índices para mejorar rendimiento
-UserSchema.index({ email: 1 });
+// NOTA: No duplicar email aquí (ya tiene unique: true arriba)
 UserSchema.index({ rol: 1, activo: 1 });
 UserSchema.index({ name: 1 });
 
