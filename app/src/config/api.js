@@ -48,13 +48,21 @@ export const fetchApi = async (path, options = {}) => {
   
   const defaultOptions = {
     credentials: 'include',
+    mode: 'cors',
     headers: {
       'Content-Type': 'application/json',
       ...options.headers,
     },
   };
   
-  return fetch(url, { ...defaultOptions, ...options });
+  const response = await fetch(url, { ...defaultOptions, ...options });
+  
+  // Log para debugging en desarrollo
+  if (import.meta.env.DEV && !response.ok) {
+    console.debug(`[fetchApi] ${options.method || 'GET'} ${url} -> ${response.status}`);
+  }
+  
+  return response;
 };
 
 export { API_BASE };
