@@ -8,12 +8,17 @@
  * @returns {string} URL base del API
  */
 export const getApiBaseUrl = () => {
-  // Prioridad 1: Variable de entorno de Vite
+  // Prioridad 1: Variable de entorno de Vite (Render la inyecta en producción)
   if (import.meta.env.VITE_API_BASE) {
     return import.meta.env.VITE_API_BASE;
   }
   
-  // Prioridad 2: LocalStorage (para desarrollo/testing)
+  // Prioridad 2: Detectar si estamos en modo desarrollo (Docker local)
+  if (import.meta.env.DEV) {
+    return 'http://localhost:4000';
+  }
+  
+  // Prioridad 3: LocalStorage (para testing manual)
   if (typeof window !== 'undefined') {
     const localStorageUrl = window.localStorage.getItem('API_BASE') || window.__API_BASE__;
     if (localStorageUrl) {
@@ -21,17 +26,7 @@ export const getApiBaseUrl = () => {
     }
   }
   
-  // Prioridad 3: Variables de entorno legacy
-  if (typeof process !== 'undefined' && process.env) {
-    if (process.env.REACT_APP_API_BASE) {
-      return process.env.REACT_APP_API_BASE;
-    }
-    if (process.env.VITE_API_BASE) {
-      return process.env.VITE_API_BASE;
-    }
-  }
-  
-  // Valor por defecto: URL de producción con HTTPS
+  // Valor por defecto: URL de producción (fallback si Render no inyecta la variable)
   return 'https://proyecto-e19.onrender.com';
 };
 
