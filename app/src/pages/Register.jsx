@@ -11,8 +11,8 @@
     const [fieldErrors, setFieldErrors] = useState({ name: "", email: "", password: "" });
     const navigate = useNavigate();
 
-      // Cargar todas las imágenes automáticamente
-      const { image } = useImage();
+    // Cargar todas las imágenes automáticamente
+    const { image } = useImage();
 
     const validateForm = () => {
       let isValid = true;
@@ -51,12 +51,19 @@
       }
       setLoading(true);
       try {
-        const res = await axios.post(getApiUrl('/api/auth/register'), form);
-        setUser(res.data.user);
-        // enviar un estado al Login para que muestre el cartel de registro correcto
+        const res = await fetchApi('/api/auth/register', {
+          method: 'POST',
+          body: JSON.stringify(form)
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Error en el registro");
+        }
+
         navigate("/login", { state: { registered: true } });
       } catch (err) {
-        setError(err.response?.data?.message || "Ha habido un error en el registro");
+        setError(err.message);
       } finally {
         setLoading(false);
       }

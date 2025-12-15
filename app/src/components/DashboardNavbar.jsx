@@ -12,7 +12,7 @@ const DashboardNavbar = ({ user, setUser }) => {
   const { currentSection, navigateToSection } = useNavigation();
 
   const handleLogout = async () => {
-    await axios.post(getApiUrl('/api/auth/logout'));
+    await fetchApi('/api/auth/logout', { method: 'POST' });
     setUser(null);
     navigate("/");
   };

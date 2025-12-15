@@ -14,9 +14,9 @@ const Navbar = ({user, setUser}) => {
   const closeTimeoutRef = useRef(null);
 
   const handleLogout = async () => {
-      await axios.post(getApiUrl('/api/auth/logout'));
-      setUser(null);
-      navigate("/");
+    await fetchApi('/api/auth/logout', { method: 'POST' });
+    setUser(null);
+    navigate("/");
   };
 
   // Cerrar dropdown al hacer clic fuera

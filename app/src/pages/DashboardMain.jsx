@@ -63,10 +63,7 @@ function DashboardMain({ menu, activeSubsection, user }) {
       // Obtener reservas de espacios
       let reservasData = [];
       try {
-        const reservasRes = await fetch('https://proyecto-e19.onrender.com/api/recursos/mis-reservas', { 
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' }
-        });
+        const reservasRes = await fetchApi('/api/recursos/mis-reservas');
         if (reservasRes.ok) {
           reservasData = await reservasRes.json();
         }

@@ -56,8 +56,13 @@ function App() {
   useEffect(() => {
     const fetchUser = async() => {
       try {
-        const res = await axios.get(getApiUrl('/api/auth/me'))
-        setUser(res.data);
+        const res = await fetchApi('/api/auth/me');
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data);
+        } else {
+          setUser(null);
+        }
       } catch(err) {
         setUser(null);
       } finally {

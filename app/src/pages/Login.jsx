@@ -63,11 +63,21 @@ const Login = ({ setUser }) => {
 
     setLoading(true);
     try {
-      const res = await axios.post(getApiUrl('/api/auth/login'), form);
-      setUser(res.data.user);
+      const res = await fetchApi('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify(form)
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Credenciales inválidas");
+      }
+
+      const data = await res.json();
+      setUser(data.user);
       navigate("/dashboard");
     } catch (err) {
-      setError(err.response?.data?.message || "Credenciales incorrectas. Por favor, intenta de nuevo.");
+      setError(err.message);
     } finally {
       setLoading(false);
     }
