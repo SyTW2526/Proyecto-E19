@@ -38,6 +38,7 @@ const sidebarMenus = {
 // Accesos rápidos que aparecen en todas las secciones
 const quickAccess = [
   { id: 'calendario-rapido', label: 'Ver calendario', icon: 'calendar', section: 'calendario' },
+  { id: 'home', label: 'Ir al inicio', icon: 'home', path: '/' },
 ];
 
 export const NavigationProvider = ({ children }) => {

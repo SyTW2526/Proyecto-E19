@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 
 function Home({ setUser }) {
   const navigate = useNavigate();
@@ -8,8 +7,8 @@ function Home({ setUser }) {
   return (
     <div style={{ backgroundColor: 'white', minHeight: '100vh' }}>
 
-      {/* Contenido principal */}
-      <main className="py-8 md:py-12 px-4 md:px-8 max-w-7xl mx-auto">
+      {/* Contenido principal con padding-top para compensar el navbar fijo */}
+      <main className="py-8 md:py-12 px-4 md:px-8 max-w-7xl mx-auto pt-20 sm:pt-24 lg:pt-28">
         {/* Sección hero de bienvenida */}
         <div className="text-left mb-12 md:mb-16">
           <h1 className="bg-gradient-to-r from-[#7024BB] to-[#8e44e5] bg-clip-text text-transparent text-4xl md:text-5xl lg:text-6xl mb-3 font-extrabold leading-tight">
