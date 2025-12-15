@@ -44,7 +44,7 @@ router.get("/", async (req, res) => {
 		if (visibility) filter.visibility = visibility;
 		if (q) filter.$or = [{ title: new RegExp(q, "i") }, { description: new RegExp(q, "i") }];
 
-		const docs = await Foro.find(filter).sort({ key: 1 }).limit(100).populate("owner", "name email");
+		const docs = await Foro.find(filter).sort({ key: 1 }).limit(100).populate("owner", "name email").lean();
 		res.json(docs);
 	} catch (err) {
 		res.status(500).json({ error: err.message });

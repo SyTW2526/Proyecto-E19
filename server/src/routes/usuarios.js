@@ -4,10 +4,28 @@ import bcrypt from "bcryptjs";
 
 const router = express.Router();
 
-// Listar todos
+// Listar usuarios (con filtros opcionales)
 router.get("/", async (req, res) => {
   try {
-    const users = await User.find().select("-password");
+    const { rol, activo, limit = 100, page = 1 } = req.query;
+    
+    // Construir query
+    const query = {};
+    if (rol) query.rol = rol; // Filtrar por rol (ej: ?rol=profesor)
+    if (activo !== undefined) query.activo = activo === 'true';
+    
+    // Paginación
+    const lim = Math.min(parseInt(limit, 10) || 100, 1000);
+    const skip = (Math.max(parseInt(page, 10) || 1, 1) - 1) * lim;
+    
+    // Query optimizada
+    const users = await User.find(query)
+      .select('name email rol telefono avatarUrl activo') // Solo campos necesarios
+      .skip(skip)
+      .limit(lim)
+      .sort({ name: 1 })
+      .lean(); // Devolver objetos planos (más rápido)
+    
     res.json(users);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -17,7 +35,9 @@ router.get("/", async (req, res) => {
 // Leer por id
 router.get("/:id", async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select("-password");
+    const user = await User.findById(req.params.id)
+      .select("-password")
+      .lean();
     if (!user) return res.status(404).json({ error: "not_found" });
     res.json(user);
   } catch (err) {
