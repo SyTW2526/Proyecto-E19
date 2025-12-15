@@ -57,6 +57,8 @@ export const fetchApi = async (path, options = {}) => {
   return fetch(url, { ...defaultOptions, ...options });
 };
 
+export { API_BASE };
+
 /**
  * Construye una URL completa del API
  * @param {string} path - Ruta del endpoint

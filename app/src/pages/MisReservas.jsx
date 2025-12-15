@@ -25,7 +25,7 @@ function MisReservas() {
     try {
       setLoading(true);
       setMessage(null);
-      const res = await fetchApi('/api/recursos/mis-reservas', { credentials: 'include' });
+      const res = await fetchApi('/api/recursos/mis-reservas');
       
       if (!res.ok) {
         let body = null;

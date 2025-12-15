@@ -52,7 +52,7 @@ function ReservaEspacios({ menu, activeSubsection }) {
 
   const fetchMyReservas = async () => {
     try {
-      const res = await fetchApi('/api/recursos/mis-reservas', { credentials: 'include' });
+      const res = await fetchApi('/api/recursos/mis-reservas');
       if (!res.ok) {
         let body = null;
         try { body = await res.json(); } catch (e) { body = await res.text().catch(() => null); }
