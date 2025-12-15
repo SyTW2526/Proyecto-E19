@@ -1,6 +1,7 @@
 # Node.js
 server/node_modules/
 app/node_modules/
+node_modules/
 
 # Coverage
 coverage/
