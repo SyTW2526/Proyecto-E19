@@ -9,6 +9,9 @@
  */
 export const getApiBaseUrl = () => {
   // Prioridad 1: Variable de entorno de Vite
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
   if (import.meta.env.VITE_API_BASE) {
     return import.meta.env.VITE_API_BASE;
   }
@@ -31,8 +34,9 @@ export const getApiBaseUrl = () => {
     }
   }
   
-  // Valor por defecto: URL de producción con HTTPS
-  return 'https://proyecto-e19.onrender.com';
+  // Valor por defecto: string vacío para usar el proxy de Vite en desarrollo
+  // En producción se usará VITE_API_URL
+  return '';
 };
 
 /**
