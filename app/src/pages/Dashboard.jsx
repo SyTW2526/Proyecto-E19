@@ -26,7 +26,7 @@ function Dashboard({ user }) {
   };
 
   const sectionDescriptions = {
-    dashboard: 'Gestiona tu actividad académica desde aquí',
+    dashboard: '',
     tutorias: 'Reserva y gestiona tus tutorías con profesores',
     espacios: 'Reserva espacios de estudio y salas',
     calendario: 'Visualiza todos tus eventos y reservas',

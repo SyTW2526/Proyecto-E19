@@ -14,8 +14,7 @@ export const useNavigation = () => {
 const sidebarMenus = {
   dashboard: [
     { id: 'resumen', label: 'Resumen general', icon: 'book' },
-    { id: 'actividad', label: 'Actividad reciente', icon: 'calendar' },
-    { id: 'proximos', label: 'Próximos eventos', icon: 'bell' },
+
   ],
   tutorias: [
     { id: 'reservar', label: 'Reservar tutoría', icon: 'calendar' },
@@ -39,7 +38,6 @@ const sidebarMenus = {
 // Accesos rápidos que aparecen en todas las secciones
 const quickAccess = [
   { id: 'calendario-rapido', label: 'Ver calendario', icon: 'calendar', section: 'calendario' },
-  { id: 'notificaciones', label: 'Notificaciones', icon: 'bell', section: 'dashboard' },
 ];
 
 export const NavigationProvider = ({ children }) => {
