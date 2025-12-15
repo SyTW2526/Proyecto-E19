@@ -75,10 +75,9 @@ function DashboardMain({ menu, activeSubsection, user }) {
       // Obtener profesores
       let profesoresData = [];
       try {
-        const usuariosRes = await fetchApi(`/api/usuarios`);
+        const usuariosRes = await fetchApi(`/api/usuarios/profesores`);
         if (usuariosRes.ok) {
-          const usuarios = await usuariosRes.json();
-          profesoresData = usuarios.filter(u => u.rol === 'profesor');
+          profesoresData = await usuariosRes.json();
         }
       } catch (err) {
         console.error('Error cargando profesores:', err);

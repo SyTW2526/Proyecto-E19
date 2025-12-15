@@ -1,11 +1,30 @@
 import express from "express";
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
+import { protect } from "../../middleware/auth.js";
 
 const router = express.Router();
 
-// Listar usuarios (con filtros opcionales)
-router.get("/", async (req, res) => {
+// Listar profesores activos (endpoint público optimizado para dashboard)
+router.get("/profesores", protect, async (req, res) => {
+  try {
+    const profesores = await User.find({ 
+      rol: 'profesor', 
+      activo: true 
+    })
+      .select('name email avatarUrl') // Solo info pública necesaria
+      .limit(100)
+      .sort({ name: 1 })
+      .lean();
+    
+    res.json(profesores);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Listar usuarios (con filtros opcionales) - PROTEGIDO
+router.get("/", protect, async (req, res) => {
   try {
     const { rol, activo, limit = 100, page = 1 } = req.query;
     
@@ -32,8 +51,8 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Leer por id
-router.get("/:id", async (req, res) => {
+// Leer por id - PROTEGIDO
+router.get("/:id", protect, async (req, res) => {
   try {
     const user = await User.findById(req.params.id)
       .select("-password")
@@ -45,12 +64,19 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// Actualizar usuario
-router.put("/:id", async (req, res) => {
+// Actualizar usuario - PROTEGIDO con ownership
+router.put("/:id", protect, async (req, res) => {
   try {
+    // Verificar ownership: solo puedes editar tu propio perfil (o ser desarrollador)
+    if (req.params.id !== req.user._id.toString() && req.user.rol !== 'desarrollador') {
+      return res.status(403).json({ error: 'forbidden', message: 'No tienes permiso para editar este perfil' });
+    }
+
     const data = req.body;
     delete data.email; // evitar cambios de email directamente
     delete data.password; // evitar cambios de password por esta ruta
+    delete data.rol; // evitar cambios de rol
+    
     const user = await User.findByIdAndUpdate(req.params.id, data, { new: true, runValidators: true }).select("-password");
     if (!user) return res.status(404).json({ error: "not_found" });
     res.json(user);
@@ -59,9 +85,14 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// Cambiar contraseña
-router.put("/:id/cambiar-password", async (req, res) => {
+// Cambiar contraseña - PROTEGIDO con ownership
+router.put("/:id/cambiar-password", protect, async (req, res) => {
   try {
+    // Verificar ownership: solo puedes cambiar tu propia contraseña
+    if (req.params.id !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'forbidden', message: 'No tienes permiso para cambiar esta contraseña' });
+    }
+
     const { currentPassword, newPassword } = req.body;
 
     if (!currentPassword || !newPassword) {
@@ -97,9 +128,14 @@ router.put("/:id/cambiar-password", async (req, res) => {
   }
 });
 
-// Eliminar usuario
-router.delete("/:id", async (req, res) => {
+// Eliminar usuario - PROTEGIDO (solo desarrolladores)
+router.delete("/:id", protect, async (req, res) => {
   try {
+    // Solo desarrolladores pueden eliminar usuarios
+    if (req.user.rol !== 'desarrollador') {
+      return res.status(403).json({ error: 'forbidden', message: 'Solo desarrolladores pueden eliminar usuarios' });
+    }
+
     const user = await User.findByIdAndDelete(req.params.id);
     if (!user) return res.status(404).json({ error: "not_found" });
     res.json({ ok: true });
