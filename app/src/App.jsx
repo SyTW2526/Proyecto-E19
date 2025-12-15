@@ -53,14 +53,19 @@ function App() {
   useEffect(() => {
     const fetchUser = async() => {
       try {
+        console.log('[App] Verificando sesión...');
         const res = await fetchApi('/api/auth/me');
+        console.log('[App] Respuesta /api/auth/me:', res.status);
         if (res.ok) {
           const data = await res.json();
+          console.log('[App] Usuario autenticado:', data.email);
           setUser(data);
         } else {
+          console.log('[App] No hay sesión activa');
           setUser(null);
         }
       } catch(err) {
+        console.error('[App] Error verificando sesión:', err);
         setUser(null);
       } finally {
         setLoading(false);

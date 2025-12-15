@@ -65,7 +65,7 @@ export const fetchApi = async (path, options = {}) => {
   return response;
 };
 
-export { API_BASE };
+// export { API_BASE };
 
 /**
  * Construye una URL completa del API
