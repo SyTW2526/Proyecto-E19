@@ -20,6 +20,7 @@ function Perfil({ user }) {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Estado para cambio de contraseña
   const [showPasswordChange, setShowPasswordChange] = useState(false);
@@ -200,7 +201,12 @@ function Perfil({ user }) {
       const updatedData = await res.json();
       setUserData(updatedData);
       setEditing(false);
-      alert('Perfil actualizado correctamente');
+      setSuccessMessage('Perfil actualizado correctamente');
+      
+      // Ocultar mensaje después de 3 segundos
+      setTimeout(() => {
+        setSuccessMessage('');
+      }, 3000);
     } catch (err) {
       console.error('Error actualizando perfil:', err);
       setError('No se pudo actualizar el perfil: ' + (err.message || 'error'));
@@ -358,15 +364,15 @@ function Perfil({ user }) {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm">
+    <div className="bg-white rounded-lg shadow-sm mt-6">
       {/* Header con foto de perfil */}
-      <div className="bg-gradient-to-r from-violet-600 to-violet-800 h-32 rounded-t-lg relative">
+      <div className="bg-gradient-to-r from-[#7024BB] to-[#5c1d99] h-32 rounded-t-lg relative">
         <div className="absolute -bottom-16 left-8">
           <div className="w-32 h-32 rounded-full bg-white border-4 border-white shadow-lg flex items-center justify-center overflow-hidden">
             {userData?.avatarUrl ? (
               <img src={userData.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full rounded-full bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center text-white text-3xl font-bold">
+              <div className="w-full h-full rounded-full bg-[#7024BB] flex items-center justify-center text-white text-3xl font-bold">
                 {getInitials}
               </div>
             )}
@@ -399,7 +405,7 @@ function Perfil({ user }) {
           {!editing ? (
             <button
               onClick={() => setEditing(true)}
-              className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-[#7024BB] hover:bg-[#5c1d99] text-white rounded-lg font-medium transition-colors flex items-center gap-2"
             >
               <Icon name="edit" className="w-4 h-4" />
               Editar perfil
@@ -410,6 +416,13 @@ function Perfil({ user }) {
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
             {error}
+          </div>
+        )}
+
+        {successMessage && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
+            <Icon name="check-circle" className="w-5 h-5 flex-shrink-0" />
+            <span>{successMessage}</span>
           </div>
         )}
 
@@ -425,7 +438,7 @@ function Perfil({ user }) {
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7024BB] focus:border-transparent"
                   placeholder="Tu nombre de usuario"
                   maxLength={100}
                   required
@@ -441,7 +454,7 @@ function Perfil({ user }) {
                   name="fullName"
                   value={formData.fullName}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7024BB] focus:border-transparent"
                   placeholder="Tu nombre completo"
                   maxLength={200}
                 />
@@ -456,7 +469,7 @@ function Perfil({ user }) {
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7024BB] focus:border-transparent"
                   placeholder="tu@email.com"
                   required
                 />
@@ -471,23 +484,52 @@ function Perfil({ user }) {
                   name="telefono"
                   value={formData.telefono}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7024BB] focus:border-transparent"
                   placeholder="+34 123 456 789"
                 />
               </div>
 
-              <div>
+              <div className="md:col-span-2">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  URL del avatar
+                  Foto de perfil
                 </label>
-                <input
-                  type="url"
-                  name="avatarUrl"
-                  value={formData.avatarUrl}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                  placeholder="https://ejemplo.com/avatar.jpg"
-                />
+                <div className="flex items-center gap-4">
+                  {/* Preview del avatar */}
+                  <div className="flex-shrink-0">
+                    {formData.avatarUrl ? (
+                      <img 
+                        src={formData.avatarUrl} 
+                        alt="Avatar preview" 
+                        className="w-20 h-20 rounded-full object-cover border-2 border-[#7024BB]"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div 
+                      className="w-20 h-20 rounded-full bg-[#7024BB] flex items-center justify-center text-white text-2xl font-bold"
+                      style={{ display: formData.avatarUrl ? 'none' : 'flex' }}
+                    >
+                      {getInitials}
+                    </div>
+                  </div>
+                  
+                  {/* Campo de URL */}
+                  <div className="flex-1">
+                    <input
+                      type="url"
+                      name="avatarUrl"
+                      value={formData.avatarUrl}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7024BB] focus:border-transparent"
+                      placeholder="https://ejemplo.com/tu-foto.jpg"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Pega la URL de tu foto de perfil (puedes usar imgur.com, postimages.org, etc.)
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -501,7 +543,7 @@ function Perfil({ user }) {
                 onChange={handleInputChange}
                 rows={4}
                 maxLength={1000}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7024BB] focus:border-transparent"
                 placeholder="Cuéntanos algo sobre ti..."
               />
               <div className="text-xs text-gray-500 mt-1 text-right">
@@ -517,7 +559,7 @@ function Perfil({ user }) {
               <div className="border border-gray-300 rounded-lg p-4 max-h-96 overflow-y-auto bg-white">
                 {asignaturasDisponibles.map((cursoData, cursoIdx) => (
                   <div key={cursoIdx} className="mb-4 last:mb-0">
-                    <h4 className="font-semibold text-violet-700 mb-2">{cursoData.curso}</h4>
+                    <h4 className="font-semibold text-[#7024BB] mb-2">{cursoData.curso}</h4>
                     {cursoData.asignaturas.map((cuatrimestreData, cuatIdx) => (
                       <div key={cuatIdx} className="mb-3">
                         <div className="text-xs font-medium text-gray-600 mb-2 pl-2">
@@ -533,7 +575,7 @@ function Perfil({ user }) {
                                 type="checkbox"
                                 checked={formData.asignaturasCursadas.includes(asignatura)}
                                 onChange={() => handleAsignaturaToggle(asignatura)}
-                                className="w-4 h-4 text-violet-600 border-gray-300 rounded focus:ring-violet-500"
+                                className="w-4 h-4 text-[#7024BB] border-gray-300 rounded focus:ring-[#7024BB]"
                               />
                               <span className="text-gray-700">{asignatura}</span>
                             </label>
@@ -553,7 +595,7 @@ function Perfil({ user }) {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="px-6 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-6 py-2 bg-[#7024BB] hover:bg-[#5c1d99] text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 <Icon name="save" className="w-4 h-4" />
                 {saving ? 'Guardando...' : 'Guardar cambios'}
@@ -591,7 +633,7 @@ function Perfil({ user }) {
                 <div className="text-gray-800 flex items-center gap-2">
                   {userData?.telefono ? (
                     <>
-                      <Icon name="phone" className="w-4 h-4 text-violet-600" />
+                      <Icon name="phone" className="w-4 h-4 text-[#7024BB]" />
                       {userData.telefono}
                     </>
                   ) : (
@@ -637,7 +679,7 @@ function Perfil({ user }) {
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Detalles de la cuenta</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div className="flex items-center gap-2 text-gray-600">
-                  <Icon name="calendar" className="w-4 h-4 text-violet-600" />
+                  <Icon name="calendar" className="w-4 h-4 text-[#7024BB]" />
                   <span>
                     Miembro desde: {userData?.createdAt 
                       ? new Date(userData.createdAt).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })
@@ -645,7 +687,7 @@ function Perfil({ user }) {
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-gray-600">
-                  <Icon name="refresh-cw" className="w-4 h-4 text-violet-600" />
+                  <Icon name="refresh-cw" className="w-4 h-4 text-[#7024BB]" />
                   <span>
                     Última actualización: {userData?.updatedAt 
                       ? new Date(userData.updatedAt).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })
@@ -673,7 +715,7 @@ function Perfil({ user }) {
                       {userData.asignaturasCursadas.map((asignatura, idx) => (
                         <span
                           key={idx}
-                          className="px-3 py-1 bg-violet-100 text-violet-700 rounded-full text-sm"
+                          className="px-3 py-1 bg-[#f3e8ff] text-[#7024BB] rounded-full text-sm font-medium"
                         >
                           {asignatura}
                         </span>
@@ -694,7 +736,7 @@ function Perfil({ user }) {
             {/* Sección de 
                 </div>
                 <div className="flex items-center gap-2 text-gray-600">
-                  <Icon name="refresh-cw" className="w-4 h-4 text-violet-600" />
+                  <Icon name="refresh-cw" className="w-4 h-4 text-[#7024BB]" />
                   <span>
                     Última actualización: {userData?.updatedAt 
                       ? new Date(userData.updatedAt).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })
@@ -711,7 +753,7 @@ function Perfil({ user }) {
                 {!showPasswordChange && (
                   <button
                     onClick={() => setShowPasswordChange(true)}
-                    className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 text-sm"
+                    className="px-4 py-2 bg-[#7024BB] hover:bg-[#5c1d99] text-white rounded-lg font-medium transition-colors flex items-center gap-2 text-sm"
                   >
                     <Icon name="cog" className="w-4 h-4" />
                     Cambiar contraseña
@@ -747,7 +789,7 @@ function Perfil({ user }) {
                         name="currentPassword"
                         value={passwordForm.currentPassword}
                         onChange={handlePasswordInputChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7024BB] focus:border-transparent"
                         placeholder="Ingresa tu contraseña actual"
                         required
                       />
@@ -762,7 +804,7 @@ function Perfil({ user }) {
                         name="newPassword"
                         value={passwordForm.newPassword}
                         onChange={handlePasswordInputChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7024BB] focus:border-transparent"
                         placeholder="Mínimo 6 caracteres"
                         required
                       />
@@ -777,7 +819,7 @@ function Perfil({ user }) {
                         name="confirmPassword"
                         value={passwordForm.confirmPassword}
                         onChange={handlePasswordInputChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7024BB] focus:border-transparent"
                         placeholder="Repite la nueva contraseña"
                         required
                       />
@@ -787,7 +829,7 @@ function Perfil({ user }) {
                       <button
                         onClick={handlePasswordChange}
                         disabled={savingPassword}
-                        className="px-6 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        className="px-6 py-2 bg-[#7024BB] hover:bg-[#5c1d99] text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                       >
                         <Icon name="save" className="w-4 h-4" />
                         {savingPassword ? 'Guardando...' : 'Actualizar contraseña'}

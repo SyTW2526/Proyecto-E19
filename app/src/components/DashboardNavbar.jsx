@@ -105,16 +105,31 @@ const DashboardNavbar = ({ user, setUser }) => {
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 bg-gradient-to-br from-[#7024BB] to-[#8e44e5] rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm hover:from-[#5f1da0] hover:to-[#7024BB] transition-all duration-200"
+            className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm hover:opacity-90 transition-all duration-200 overflow-hidden border-2 border-[#7024BB]"
           >
-            {getInitial(user)}
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-[#7024BB] to-[#8e44e5] flex items-center justify-center">
+                {getInitial(user)}
+              </div>
+            )}
           </button>
 
           {dropdownOpen && (
             <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 animate-slideDown">
               <div className="px-4 py-3 border-b border-gray-100">
                 <p className="text-sm font-medium text-gray-900">{user?.name || 'Usuario'}</p>
-                <p className="text-xs text-gray-500 truncate">{user?.email || ''}</p>
+                <p className="text-xs text-gray-500 truncate mb-2">{user?.email || ''}</p>
+                {user?.rol && (
+                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
+                    user.rol === 'profesor' ? 'bg-blue-100 text-blue-700' :
+                    user.rol === 'desarrollador' ? 'bg-red-100 text-red-700' :
+                    'bg-green-100 text-green-700'
+                  }`}>
+                    {user.rol.charAt(0).toUpperCase() + user.rol.slice(1)}
+                  </span>
+                )}
               </div>
               <button
                 onClick={() => {
