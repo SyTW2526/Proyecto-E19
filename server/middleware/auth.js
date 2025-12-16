@@ -13,7 +13,7 @@ export const protect = async (req, res, next) => {
     }
 
     if (!token) {
-      return res.status(401).json({ error: 'not_authenticated', message: 'No estás autenticado' });
+      return res.status(401).json({ error: 'No autorizado - Token no encontrado' });
     }
 
     // Verificar token

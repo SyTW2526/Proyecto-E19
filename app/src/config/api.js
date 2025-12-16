@@ -41,11 +41,15 @@ export const fetchApi = async (path, options = {}) => {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   const url = `${baseUrl}${normalizedPath}`;
   
+  // Obtener token de localStorage si existe
+  const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+  
   const defaultOptions = {
     credentials: 'include',
     mode: 'cors',
     headers: {
       'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }), // Añadir token si existe
       ...options.headers,
     },
   };
