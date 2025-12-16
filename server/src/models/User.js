@@ -20,8 +20,8 @@ const UserSchema = new Schema({
   timestamps: true
 });
 
-// OPTIMIZACIONES: Añadir índices para queries frecuentes
-UserSchema.index({ email: 1 }, { unique: true });
+// Índices para mejorar rendimiento
+// NOTA: No duplicar email aquí (ya tiene unique: true arriba)
 UserSchema.index({ rol: 1, activo: 1 });
 UserSchema.index({ activo: 1 });
 

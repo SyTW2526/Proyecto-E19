@@ -1,18 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigation } from '../contexts/NavigationContext';
 import Icon from '../components/Icon';
+import { fetchApi } from '../config/api';
 
 function DashboardMain({ menu, activeSubsection, user }) {
   const item = menu.find((m) => m.id === activeSubsection) || {};
   const { navigateToSection } = useNavigation();
-
-  // API base
-  const API_BASE = 'http://localhost:4000';
-  const fetchApi = (path, opts = {}) => {
-    const p = path.startsWith('/') ? path : `/${path}`;
-    const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
-    return fetch(`${API_BASE}${p}`, { ...opts, headers });
-  };
 
   const [tutorias, setTutorias] = useState([]);
   const [reservas, setReservas] = useState([]);
@@ -70,10 +63,7 @@ function DashboardMain({ menu, activeSubsection, user }) {
       // Obtener reservas de espacios
       let reservasData = [];
       try {
-        const reservasRes = await fetch('http://localhost:4000/api/recursos/mis-reservas', { 
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' }
-        });
+        const reservasRes = await fetchApi('/api/recursos/mis-reservas');
         if (reservasRes.ok) {
           reservasData = await reservasRes.json();
         }

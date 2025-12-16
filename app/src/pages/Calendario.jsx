@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useNavigation } from '../contexts/NavigationContext';
+import { fetchApi } from '../config/api';
 
 function Calendario({ user }) {
   const { navigateToSection } = useNavigation();
@@ -18,14 +18,6 @@ function Calendario({ user }) {
   // Obtener uid del usuario recibido por props o localStorage como fallback
   const currentUser = user || JSON.parse(localStorage.getItem('user') || '{}');
   const uid = currentUser._id || currentUser.id;
-
-  // API helper
-  const API_BASE = 'http://localhost:4000';
-  const fetchApi = (path, opts = {}) => {
-    const p = path.startsWith('/') ? path : `/${path}`;
-    const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
-    return fetch(`${API_BASE}${p}`, { ...opts, headers });
-  };
 
   useEffect(() => {
     if (uid) {

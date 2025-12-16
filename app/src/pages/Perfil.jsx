@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { fetchApi } from '../config/api';
 import Icon from '../components/Icon';
 
 function Perfil({ user }) {
@@ -118,7 +119,7 @@ function Perfil({ user }) {
   const API_BASE =
     (typeof window !== 'undefined' && (window.__API_BASE__ || window.localStorage.getItem('API_BASE'))) ||
     (typeof process !== 'undefined' && (process.env && (process.env.REACT_APP_API_BASE || process.env.VITE_API_BASE))) ||
-    'http://localhost:4000';
+    'https://proyecto-e19.onrender.com';
 
   const fetchApi = (path, opts = {}) => {
     const p = path.startsWith('/') ? path : `/${path}`;

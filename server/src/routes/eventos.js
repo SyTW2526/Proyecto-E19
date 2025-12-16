@@ -45,7 +45,7 @@ router.get("/", async (req, res) => {
         // si manejas recurrencias, debes generar ocurrencias desde rules
       ];
     }
-    const docs = await EventoPersonal.find(q).sort({ start: 1 }).limit(100);
+    const docs = await EventoPersonal.find(q).sort({ start: 1 }).limit(100).lean();
     res.json(docs);
   } catch (err) {
     res.status(500).json({ error: err.message });

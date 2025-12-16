@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { fetchApi } from '../config/api';
 
 const Navbar = ({user, setUser}) => {
   const navigate = useNavigate();
@@ -12,15 +13,9 @@ const Navbar = ({user, setUser}) => {
   const closeTimeoutRef = useRef(null);
 
   const handleLogout = async () => {
-    try {
-      await axios.post("http://localhost:4000/api/auth/logout", {}, { 
-        withCredentials: true 
-      });
-      setUser(null);
-      navigate("/");
-    } catch (error) {
-      console.error('Error al cerrar sesión:', error);
-    }
+    await fetchApi('/api/auth/logout', { method: 'POST' });
+    setUser(null);
+    navigate("/");
   };
 
   // Cerrar dropdown al hacer clic fuera

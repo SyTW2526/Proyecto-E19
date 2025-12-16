@@ -9,9 +9,7 @@ import Dashboard from './pages/Dashboard';
 import Perfil from './pages/Perfil';
 import AboutUs from './pages/AboutUs';
 import { NavigationProvider } from './contexts/NavigationContext';
-import axios from 'axios';
-
-axios.defaults.withCredentials = true;
+import { fetchApi } from './config/api';
 
 function AppContent({ user, setUser, loading }) {
   const location = useLocation();
@@ -57,9 +55,19 @@ function App() {
   useEffect(() => {
     const fetchUser = async() => {
       try {
-        const res = await axios.get("http://localhost:4000/api/auth/me")
-        setUser(res.data);
+        console.log('[App] Verificando sesión...');
+        const res = await fetchApi('/api/auth/me');
+        console.log('[App] Respuesta /api/auth/me:', res.status);
+        if (res.ok) {
+          const data = await res.json();
+          console.log('[App] Usuario autenticado:', data.email);
+          setUser(data);
+        } else {
+          console.log('[App] No hay sesión activa');
+          setUser(null);
+        }
       } catch(err) {
+        console.error('[App] Error verificando sesión:', err);
         setUser(null);
       } finally {
         setLoading(false);
@@ -71,7 +79,7 @@ function App() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post("http://localhost:4000/api/auth/login", form);
+      const res = await axios.post(getApiUrl('/api/auth/login'), form);
       setUser(res.data);
     }  catch (err) {
       setError(err.response?.data?.message || "An error occurred");

@@ -1,4 +1,5 @@
 import React from 'react';
+import { fetchApi } from '../config/api';
 
 function MisReservas() {
   const [misReservas, setMisReservas] = React.useState([]);
@@ -24,7 +25,7 @@ function MisReservas() {
     try {
       setLoading(true);
       setMessage(null);
-      const res = await fetch('/api/recursos/mis-reservas', { credentials: 'include' });
+      const res = await fetchApi('/api/recursos/mis-reservas');
       
       if (!res.ok) {
         let body = null;
@@ -59,7 +60,7 @@ function MisReservas() {
     
     try {
       setLoading(true);
-      const res = await fetch(`/api/recursos/${reservaToCancel.recurso?._id}/reservas/${reservaToCancel._id}`, {
+      const res = await fetchApi(`/api/recursos/${reservaToCancel.recurso?._id}/reservas/${reservaToCancel._id}`, {
         method: 'DELETE',
         credentials: 'include'
       });
@@ -99,7 +100,7 @@ function MisReservas() {
       const fecha = new Date(reservaToEdit.fechaReserva);
       fecha.setHours(parseInt(hours), parseInt(minutes), 0, 0);
       
-      const res = await fetch(`/api/recursos/${reservaToEdit.recurso?._id}/reservas/${reservaToEdit._id}`, {
+      const res = await fetchApi(`/api/recursos/${reservaToEdit.recurso?._id}/reservas/${reservaToEdit._id}`, {
         method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

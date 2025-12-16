@@ -42,7 +42,8 @@ router.get("/usuario/:userId", async (req, res) => {
     .populate("profesor", "name email")
     .populate("estudiante", "name email")
     .sort({ fechaInicio: 1 })
-    .limit(100);
+    .limit(100)
+    .lean();
     
     res.json(tutorias);
   } catch (err) {
@@ -65,7 +66,8 @@ router.get("/", async (req, res) => {
       .populate("profesor", "name email")
       .populate("estudiante", "name email")
       .sort({ fechaInicio: 1 })
-      .limit(100);
+      .limit(100)
+      .lean();
     res.json(docs);
   } catch (err) {
     res.status(500).json({ error: err.message });

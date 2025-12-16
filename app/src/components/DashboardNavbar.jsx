@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios';
 import { useNavigation } from '../contexts/NavigationContext';
+import { fetchApi } from '../config/api';
 
 const DashboardNavbar = ({ user, setUser }) => {
   const navigate = useNavigate();
@@ -11,16 +11,9 @@ const DashboardNavbar = ({ user, setUser }) => {
   const { currentSection, navigateToSection } = useNavigation();
 
   const handleLogout = async () => {
-    try {
-      await fetchApi('/api/auth/logout', { method: 'POST' });
-      setUser(null);
-      navigate("/");
-    } catch (error) {
-      console.error('Error al cerrar sesión:', error);
-      // Incluso si falla, limpiar el usuario localmente
-      setUser(null);
-      navigate("/");
-    }
+    await fetchApi('/api/auth/logout', { method: 'POST' });
+    setUser(null);
+    navigate("/");
   };
 
   // Función auxiliar para navegar y actualizar el contexto si es necesario

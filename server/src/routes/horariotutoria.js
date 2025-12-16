@@ -57,7 +57,8 @@ router.get("/:profesorId", async (req, res) => {
     const horarios = await HorarioTutoria.find({
       profesor: req.params.profesorId,
       activo: true
-    });
+    })
+    .lean();
 
     res.json(horarios);
   } catch (err) {
@@ -88,7 +89,8 @@ router.get("/disponibilidad", async (req, res) => {
       profesor,
       diaSemana,
       activo: true
-    });
+    })
+    .lean();
 
     // 2. Reservas existentes en esa fecha
     const reservas = await Tutoria.find({
@@ -97,7 +99,8 @@ router.get("/disponibilidad", async (req, res) => {
         $gte: new Date(fechaObj.setHours(0, 0, 0, 0)),
         $lte: new Date(fechaObj.setHours(23, 59, 59, 999))
       }
-    });
+    })
+    .lean();
 
     res.json({ horarios, reservas });
   } catch (err) {

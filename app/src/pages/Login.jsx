@@ -1,7 +1,7 @@
 import React, { useState, useEffect  } from 'react';
-import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useImage } from '../components/ImageContext';
+import { fetchApi } from '../config/api';
 
 const Login = ({ setUser }) => {
     const navigate = useNavigate();
@@ -62,11 +62,21 @@ const Login = ({ setUser }) => {
 
     setLoading(true);
     try {
-      const res = await axios.post("http://localhost:4000/api/auth/login", form);
-      setUser(res.data.user);
+      const res = await fetchApi('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify(form)
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Credenciales inválidas");
+      }
+
+      const data = await res.json();
+      setUser(data.user);
       navigate("/dashboard");
     } catch (err) {
-      setError(err.response?.data?.message || "Credenciales incorrectas. Por favor, intenta de nuevo.");
+      setError(err.message);
     } finally {
       setLoading(false);
     }

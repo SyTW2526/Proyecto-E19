@@ -51,7 +51,8 @@ router.get("/", async (req, res) => {
 			.skip(skip)
 			.limit(lim)
 			.populate("author", "name email")
-			.populate("foro", "key title");
+			.populate("foro", "key title")
+			.lean();
 		res.json(docs);
 	} catch (err) {
 		res.status(500).json({ error: err.message });
