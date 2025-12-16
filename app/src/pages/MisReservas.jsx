@@ -11,6 +11,7 @@ function MisReservas() {
   const [reservaToEdit, setReservaToEdit] = React.useState(null);
   const [newTime, setNewTime] = React.useState('');
   const [filterType, setFilterType] = React.useState('all');
+  const [showCancelled, setShowCancelled] = React.useState(true);
 
   React.useEffect(() => {
     fetchMy();
@@ -132,28 +133,52 @@ function MisReservas() {
   };
 
   const filteredReservas = React.useMemo(() => {
-    if (filterType === 'all') return misReservas;
-    return misReservas.filter(r => r.recurso?.tipo === filterType);
-  }, [misReservas, filterType]);
+    let filtered = misReservas;
+    
+    // Filtrar por tipo
+    if (filterType !== 'all') {
+      filtered = filtered.filter(r => r.recurso?.tipo === filterType);
+    }
+    
+    // Filtrar canceladas si está desactivado
+    if (!showCancelled) {
+      filtered = filtered.filter(r => r.estado !== 'cancelada');
+    }
+    
+    return filtered;
+  }, [misReservas, filterType, showCancelled]);
 
   return (
     <div className="mt-4">
       {/* Filtros por tipo */}
       {!loading && misReservas.length > 0 && (
-        <div className="mb-4 flex flex-wrap gap-2">
-          {types.map(t => (
-            <button
-              key={t}
-              onClick={() => setFilterType(t)}
-              className={`text-sm px-4 py-2 rounded-full font-medium transition-all ${
-                filterType === t 
-                  ? 'bg-[#7024BB] text-white' 
-                  : 'bg-white text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              {formatLabel(t)}
-            </button>
-          ))}
+        <div className="mb-4">
+          <div className="flex flex-wrap gap-2 mb-3">
+            {types.map(t => (
+              <button
+                key={t}
+                onClick={() => setFilterType(t)}
+                className={`text-sm px-4 py-2 rounded-full font-medium transition-all ${
+                  filterType === t 
+                    ? 'bg-[#7024BB] text-white' 
+                    : 'bg-white text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                {formatLabel(t)}
+              </button>
+            ))}
+          </div>
+          
+          {/* Toggle para mostrar/ocultar canceladas */}
+          <button
+            onClick={() => setShowCancelled(!showCancelled)}
+            className="text-sm px-4 py-2 rounded-xl font-medium transition-all bg-white text-gray-700 hover:bg-gray-100 border border-gray-200 flex items-center gap-2"
+          >
+            <svg className={`w-4 h-4 transition-transform ${showCancelled ? '' : 'rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={showCancelled ? "M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" : "M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"} />
+            </svg>
+            {showCancelled ? 'Ocultar canceladas' : 'Mostrar canceladas'}
+          </button>
         </div>
       )}
 
@@ -255,7 +280,7 @@ function MisReservas() {
 
       {/* Modal de confirmación de cancelación */}
       {showCancelModal && (
-        <div className="fixed inset-0 bg-gray-100 flex items-center justify-center z-50 p-4 rounded-tl-3xl" onClick={() => setShowCancelModal(false)}>
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowCancelModal(false)}>
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4">
               <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">

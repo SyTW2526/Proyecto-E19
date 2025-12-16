@@ -4,9 +4,6 @@ import cors from "cors";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import eventosRouter from "./routes/eventos.js";
-import forosRouter from "./routes/foro.js";
-import threadsRouter from "./routes/threads.js";
-import postsRouter from "./routes/posts.js";
 import userRouter from "./routes/usuarios.js";
 import tutoriaRouter from "./routes/tutorias.js";
 import authRouter from "./routes/auth.js";
@@ -48,8 +45,6 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
-
-// app.use(express.static("/app_static"));
 
 // Configuración optimizada de MongoDB
 mongoose.set('strictQuery', false);
@@ -132,9 +127,6 @@ app.get("/healthz", (req, res) => {
 
 
 app.use("/api/eventos", eventosRouter);
-app.use("/api/foros", forosRouter); 
-app.use("/api/threads", threadsRouter); 
-app.use("/api/posts", postsRouter);
 app.use("/api/usuarios", userRouter);
 app.use("/api/tutorias", tutoriaRouter);
 app.use("/api/auth", authRouter);

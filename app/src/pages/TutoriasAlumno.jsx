@@ -25,10 +25,22 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
   };
 
   // compute 30min slots for a professor's HorarioTutoria entries over next N days
-  const computeSlotsForProfessor = (prof, daysAhead = 14) => {
+  const computeSlotsForProfessor = async (prof, daysAhead = 14) => {
     if (!prof || !Array.isArray(prof.horarios)) return [];
     const now = new Date();
     const slots = [];
+    
+    // Fetch existing reservations for this professor
+    let existingTutorias = [];
+    try {
+      const res = await fetchApi(`/api/tutorias?profesor=${encodeURIComponent(prof.id)}`);
+      if (res.ok) {
+        existingTutorias = await res.json();
+      }
+    } catch (err) {
+      console.error('Error fetching existing tutorias:', err);
+    }
+    
     for (let offset = 0; offset < daysAhead; offset++) {
       const date = new Date();
       date.setDate(now.getDate() + offset);
@@ -46,11 +58,25 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
           const slotEnd = new Date(t.getTime() + 30 * 60000);
           if (slotEnd <= now) continue; // skip past slots
           if (slotEnd > endBase) continue;
-          slots.push({
-            isoStart: slotStart.toISOString(),
-            isoEnd: slotEnd.toISOString(),
-            label: `${slotStart.toLocaleDateString()} ${String(slotStart.getHours()).padStart(2,'0')}:${String(slotStart.getMinutes()).padStart(2,'0')} - ${String(slotEnd.getHours()).padStart(2,'0')}:${String(slotEnd.getMinutes()).padStart(2,'0')}`
+          
+          // Check if this slot overlaps with any existing reservation
+          const hasCollision = existingTutorias.some(tutoria => {
+            // Skip cancelled tutorias
+            if (tutoria.estado === 'cancelada' || tutoria.estado === 'Cancelada') return false;
+            const tutoriaStart = new Date(tutoria.fechaInicio);
+            const tutoriaEnd = new Date(tutoria.fechaFin);
+            // Check overlap: slot overlaps if slotStart < tutoriaEnd AND slotEnd > tutoriaStart
+            return slotStart < tutoriaEnd && slotEnd > tutoriaStart;
           });
+          
+          // Only add slot if no collision
+          if (!hasCollision) {
+            slots.push({
+              isoStart: slotStart.toISOString(),
+              isoEnd: slotEnd.toISOString(),
+              label: `${slotStart.toLocaleDateString()} ${String(slotStart.getHours()).padStart(2,'0')}:${String(slotStart.getMinutes()).padStart(2,'0')} - ${String(slotEnd.getHours()).padStart(2,'0')}:${String(slotEnd.getMinutes()).padStart(2,'0')}`
+            });
+          }
         }
       });
     }
@@ -116,15 +142,17 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
   }, [activeSubsection]);
 
   // open reservation form for a professor
-  const openReserve = (prof) => {
+  const openReserve = async (prof) => {
     setReservedProfessor(prof);
-    const slots = computeSlotsForProfessor(prof, 14);
+    setLoading(true);
+    const slots = await computeSlotsForProfessor(prof, 14);
     setAvailableSlots(slots);
     setSelectedSlot(slots[0] || null);
     setTema('');
     setDescripcion('');
     setModalidadReserva('presencial');
     setLugarReserva('');
+    setLoading(false);
   };
 
   // submit Tutoria to server (use /api/tutorias)
@@ -246,7 +274,6 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
 
   const [historial, setHistorial] = useState([]);
   const [loadingHistorial, setLoadingHistorial] = useState(false);
-  const [selectedSession, setSelectedSession] = useState(null);
 
   const personLabel = (p) => {
     if (!p) return '';
@@ -322,9 +349,6 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
 
   const prevWeek = () => { const d = new Date(weekStart); d.setDate(d.getDate() - 7); setWeekStart(startOfWeek(d)); };
   const nextWeek = () => { const d = new Date(weekStart); d.setDate(d.getDate() + 7); setWeekStart(startOfWeek(d)); };
-
-  const openSession = (s) => setSelectedSession(s);
-  const closeSession = () => setSelectedSession(null);
 
   // -----------------------
   // fin historial
@@ -618,7 +642,15 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
                 : 'bg-green-50 text-green-700 border-green-200'
             }`}>
               <div className="flex items-center gap-3">
-                <span className="text-2xl">{message.type === 'error' ? '⚠️' : '✅'}</span>
+                {message.type === 'error' ? (
+                  <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
                 <span>{message.text}</span>
               </div>
             </div>
@@ -655,8 +687,7 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
                 return (
                   <div
                     key={tutoria._id || tutoria.id || `${tutoria.startDate}-${tutoria.title}`}
-                    className="p-5 rounded-xl bg-gray-50 hover:ring-2 hover:ring-[#7024BB] transition-all cursor-pointer"
-                    onClick={() => openSession(tutoria)}
+                    className="p-5 rounded-xl bg-gray-50 border border-gray-200 hover:ring-2 hover:ring-[#7024BB] transition-all"
                   >
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
@@ -671,9 +702,19 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
                           : 'bg-green-50 text-green-700 border border-green-200'
                       }`}>
                         {isPast ? (
-                          <>⏱ Pasada</>
+                          <>
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Pasada
+                          </>
                         ) : (
-                          <>✓ Confirmada</>
+                          <>
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Confirmada
+                          </>
                         )}
                       </span>
                     </div>
@@ -806,11 +847,7 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
                         return (
                           <div
                             key={s._id || s.id || `${s.startDate}-${s.title}`}
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => openSession(s)}
-                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openSession(s); }}
-                            className="absolute left-3 right-3 rounded-lg shadow-lg cursor-pointer"
+                            className="absolute left-3 right-3 rounded-lg shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all"
                             style={{ top: `${Math.max(0, minutesFromStart)}px`, height: `${blockHeight}px`, overflow: 'hidden' }}
                             title={`${s.title || 'Tutoría'}${s.modalidad ? ' — ' + s.modalidad : ''}`}
                           >
@@ -831,120 +868,6 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
               </div>
             </div>
           </div>
-
-          {/* modal detalle */}
-          {selectedSession && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center">
-              <div className="absolute inset-0 bg-black/20" onClick={closeSession} />
-              <div className="relative z-10 w-full max-w-lg mx-4 bg-white rounded-lg shadow-xl overflow-auto max-h-[80vh]">
-                <div className="flex items-start justify-between p-4 border-b">
-                  <div>
-                    <h3 className="text-lg font-semibold">{selectedSession.title || selectedSession.tema || 'Tutoría'}</h3>
-                    <div className="text-xs text-gray-500 mt-1">
-                      Profesor: {selectedSession.profesor ? personLabel(selectedSession.profesor) : 'Sin asignar'}
-                    </div>
-                    {selectedSession.estado && (
-                      <div className="mt-2">
-                        <span className={`px-2 py-1 text-xs font-semibold rounded ${
-                          (selectedSession.estado || '').toLowerCase() === 'confirmada' || (selectedSession.estado || '').toLowerCase() === 'confirmed'
-                            ? 'bg-green-100 text-green-700'
-                            : (selectedSession.estado || '').toLowerCase() === 'pendiente' || (selectedSession.estado || '').toLowerCase() === 'pending'
-                            ? 'bg-yellow-100 text-yellow-700'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}>
-                          {selectedSession.estado}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <button onClick={closeSession} className="text-gray-500 hover:text-gray-700 ml-4 text-xl">✕</button>
-                </div>
-                <div className="p-4 space-y-4">
-                  <div>
-                    <div className="text-xs text-gray-500 font-semibold mb-1">Fecha y hora</div>
-                    <div className="text-sm text-gray-700">
-                      📅 {selectedSession.startDate ? new Date(selectedSession.startDate).toLocaleDateString('es-ES', { 
-                        weekday: 'long', 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                      }) : 'No especificada'}
-                    </div>
-                    <div className="text-sm text-gray-700 mt-1">
-                      🕐 {selectedSession.startDate ? new Date(selectedSession.startDate).toLocaleTimeString('es-ES', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                      }) : ''}
-                      {selectedSession.endDate ? ` - ${new Date(selectedSession.endDate).toLocaleTimeString('es-ES', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                      })}` : ''}
-                    </div>
-                  </div>
-
-                  {selectedSession.descripcion && (
-                    <div>
-                      <div className="text-xs text-gray-500 font-semibold mb-1">Descripción</div>
-                      <div className="text-sm text-gray-700 p-3 bg-gray-50 rounded">
-                        {selectedSession.descripcion}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-4">
-                    {selectedSession.modalidad && (
-                      <div>
-                        <div className="text-xs text-gray-500 font-semibold mb-1">Modalidad</div>
-                        <div className="text-sm text-gray-700 flex items-center gap-2">
-                          <span>{selectedSession.modalidad === 'online' ? '💻' : '🏫'}</span>
-                          <span className="capitalize">{selectedSession.modalidad}</span>
-                        </div>
-                      </div>
-                    )}
-                    {selectedSession.lugar && (
-                      <div>
-                        <div className="text-xs text-gray-500 font-semibold mb-1">Lugar</div>
-                        <div className="text-sm text-gray-700 flex items-center gap-2">
-                          <span>📍</span>
-                          <span>{selectedSession.lugar}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {selectedSession.estudiante && (
-                    <div>
-                      <div className="text-xs text-gray-500 font-semibold mb-1">Estudiante</div>
-                      <div className="text-sm text-gray-700">
-                        {personLabel(selectedSession.estudiante)}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-4 border-t bg-gray-50 flex gap-2">
-                  <button
-                    onClick={closeSession}
-                    className="flex-1 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium transition-colors"
-                  >
-                    Cerrar
-                  </button>
-                  {((selectedSession.estado || '').toLowerCase() === 'pendiente' || (selectedSession.estado || '').toLowerCase() === 'pending') && (
-                    <button
-                      onClick={() => {
-                        closeSession();
-                        handleCancelarSolicitud(selectedSession._id || selectedSession.id);
-                      }}
-                      disabled={processingAction === (selectedSession._id || selectedSession.id)}
-                      className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {processingAction === (selectedSession._id || selectedSession.id) ? 'Cancelando...' : 'Cancelar tutoría'}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       ) : null}
 
@@ -1138,127 +1061,21 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
                 : 'bg-green-50 text-green-700 border-green-200'
             }`}>
               <div className="flex items-center gap-3">
-                <span className="text-2xl">{message.type === 'error' ? '⚠️' : '✅'}</span>
+                {message.type === 'error' ? (
+                  <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
                 <span>{message.text}</span>
               </div>
             </div>
           )}
         </div>
       ) : null}
-
-      {/* Modal detalle - disponible en todas las secciones */}
-      {selectedSession && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/20" onClick={closeSession} />
-          <div className="relative z-10 w-full max-w-lg mx-4 bg-white rounded-lg shadow-xl overflow-auto max-h-[80vh]">
-            <div className="flex items-start justify-between p-4 border-b">
-              <div>
-                <h3 className="text-lg font-semibold">{selectedSession.title || selectedSession.tema || 'Tutoría'}</h3>
-                <div className="text-xs text-gray-500 mt-1">
-                  Profesor: {selectedSession.profesor ? personLabel(selectedSession.profesor) : 'Sin asignar'}
-                </div>
-                {selectedSession.estado && (
-                  <div className="mt-2">
-                    <span className={`px-2 py-1 text-xs font-semibold rounded ${
-                      (selectedSession.estado || '').toLowerCase() === 'confirmada' || (selectedSession.estado || '').toLowerCase() === 'confirmed'
-                        ? 'bg-green-100 text-green-700'
-                        : (selectedSession.estado || '').toLowerCase() === 'pendiente' || (selectedSession.estado || '').toLowerCase() === 'pending'
-                        ? 'bg-yellow-100 text-yellow-700'
-                        : 'bg-gray-100 text-gray-700'
-                    }`}>
-                      {selectedSession.estado}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <button onClick={closeSession} className="text-gray-500 hover:text-gray-700 ml-4 text-xl">✕</button>
-            </div>
-            <div className="p-4 space-y-4">
-              <div>
-                <div className="text-xs text-gray-500 font-semibold mb-1">Fecha y hora</div>
-                <div className="text-sm text-gray-700">
-                  📅 {selectedSession.startDate ? new Date(selectedSession.startDate).toLocaleDateString('es-ES', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  }) : 'No especificada'}
-                </div>
-                <div className="text-sm text-gray-700 mt-1">
-                  🕐 {selectedSession.startDate ? new Date(selectedSession.startDate).toLocaleTimeString('es-ES', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                  }) : ''}
-                  {selectedSession.endDate ? ` - ${new Date(selectedSession.endDate).toLocaleTimeString('es-ES', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                  })}` : ''}
-                </div>
-              </div>
-
-              {selectedSession.descripcion && (
-                <div>
-                  <div className="text-xs text-gray-500 font-semibold mb-1">Descripción</div>
-                  <div className="text-sm text-gray-700 p-3 bg-gray-50 rounded">
-                    {selectedSession.descripcion}
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                {selectedSession.modalidad && (
-                  <div>
-                    <div className="text-xs text-gray-500 font-semibold mb-1">Modalidad</div>
-                    <div className="text-sm text-gray-700 flex items-center gap-2">
-                      <span>{selectedSession.modalidad === 'online' ? '💻' : '🏫'}</span>
-                      <span className="capitalize">{selectedSession.modalidad}</span>
-                    </div>
-                  </div>
-                )}
-                {selectedSession.lugar && (
-                  <div>
-                    <div className="text-xs text-gray-500 font-semibold mb-1">Lugar</div>
-                    <div className="text-sm text-gray-700 flex items-center gap-2">
-                      <span>📍</span>
-                      <span>{selectedSession.lugar}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {selectedSession.estudiante && (
-                <div>
-                  <div className="text-xs text-gray-500 font-semibold mb-1">Estudiante</div>
-                  <div className="text-sm text-gray-700">
-                    {personLabel(selectedSession.estudiante)}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="p-4 border-t bg-gray-50 flex gap-2">
-              <button
-                onClick={closeSession}
-                className="flex-1 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium transition-colors"
-              >
-                Cerrar
-              </button>
-              {((selectedSession.estado || '').toLowerCase() === 'pendiente' || (selectedSession.estado || '').toLowerCase() === 'pending') && (
-                <button
-                  onClick={() => {
-                    closeSession();
-                    handleCancelarSolicitud(selectedSession);
-                  }}
-                  disabled={processingAction === (selectedSession._id || selectedSession.id)}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {processingAction === (selectedSession._id || selectedSession.id) ? 'Cancelando...' : 'Cancelar tutoría'}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modal de confirmación de cancelación */}
       {showCancelModal && tutoriaToCancel && (
