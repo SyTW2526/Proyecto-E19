@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchApi } from '../config/api';
 import Icon from '../components/Icon';
@@ -116,19 +116,7 @@ function Perfil({ user }) {
     }
   ];
 
-  const API_BASE =
-    (typeof window !== 'undefined' && (window.__API_BASE__ || window.localStorage.getItem('API_BASE'))) ||
-    (typeof process !== 'undefined' && (process.env && (process.env.REACT_APP_API_BASE || process.env.VITE_API_BASE))) ||
-    'https://proyecto-e19.onrender.com';
-
-  const fetchApi = (path, opts = {}) => {
-    const p = path.startsWith('/') ? path : `/${path}`;
-    const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
-    return fetch(`${API_BASE}${p}`, { ...opts, headers });
-  };
-
-  useEffect(() => {
-    const loadUserData = async () => {
+  const loadUserData = useCallback(async () => {
       if (!user || !(user._id || user.id)) {
         setLoading(false);
         return;
@@ -170,10 +158,11 @@ function Perfil({ user }) {
       } finally {
         setLoading(false);
       }
-    };
+    }, [user]);
 
+  useEffect(() => {
     loadUserData();
-  }, [user]);
+  }, [loadUserData]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -187,7 +176,7 @@ function Perfil({ user }) {
     setPasswordSuccess('');
   };
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!user || !(user._id || user.id)) {
       setError('Usuario no identificado');
       return;
@@ -218,9 +207,9 @@ function Perfil({ user }) {
     } finally {
       setSaving(false);
     }
-  };
+  }, [user, formData]);
 
-  const handlePasswordChange = async () => {
+  const handlePasswordChange = useCallback(async () => {
     setPasswordError('');
     setPasswordSuccess('');
 
@@ -281,7 +270,7 @@ function Perfil({ user }) {
     } finally {
       setSavingPassword(false);
     }
-  };
+  }, [user, passwordForm]);
 
   const handleCancel = () => {
     setFormData({
@@ -321,12 +310,12 @@ function Perfil({ user }) {
     setShowPasswordChange(false);
   };
 
-  const getInitials = () => {
+  const getInitials = useMemo(() => {
     const name = userData?.username || userData?.name || 'Usuario';
     return name.split(' ').map(n => n?.[0] || '').slice(0, 2).join('').toUpperCase();
-  };
+  }, [userData?.username, userData?.name]);
 
-  const getRoleBadge = () => {
+  const getRoleBadge = useMemo(() => {
     const role = (userData?.rol || 'alumno').toLowerCase();
     const colors = {
       desarrollador: 'bg-red-100 text-red-700',
@@ -345,7 +334,7 @@ function Perfil({ user }) {
         {labels[role] || role.charAt(0).toUpperCase() + role.slice(1)}
       </span>
     );
-  };
+  }, [userData?.rol]);
 
   if (loading) {
     return (
@@ -378,7 +367,7 @@ function Perfil({ user }) {
               <img src={userData.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full rounded-full bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center text-white text-3xl font-bold">
-                {getInitials()}
+                {getInitials}
               </div>
             )}
           </div>
@@ -393,7 +382,7 @@ function Perfil({ user }) {
               {userData?.username || userData?.name || 'Usuario'}
             </h1>
             <div className="flex items-center gap-3 mb-3">
-              {getRoleBadge()}
+              {getRoleBadge}
               {userData?.email && (
                 <span className="text-sm text-gray-500 flex items-center gap-1">
                   <Icon name="mail" className="w-4 h-4" />

@@ -77,10 +77,18 @@ router.put("/:id", protect, async (req, res) => {
     delete data.password; // evitar cambios de password por esta ruta
     delete data.rol; // evitar cambios de rol
     
+    // Log para debug (temporal)
+    console.log('📝 Actualizando usuario:', req.params.id);
+    console.log('📦 Datos recibidos:', JSON.stringify(data, null, 2));
+    console.log('📚 Asignaturas:', data.asignaturasCursadas);
+    
     const user = await User.findByIdAndUpdate(req.params.id, data, { new: true, runValidators: true }).select("-password");
     if (!user) return res.status(404).json({ error: "not_found" });
+    
+    console.log('✅ Usuario actualizado:', user._id, 'Asignaturas guardadas:', user.asignaturasCursadas?.length);
     res.json(user);
   } catch (err) {
+    console.error('❌ Error actualizando usuario:', err);
     res.status(400).json({ error: err.message });
   }
 });
