@@ -1,10 +1,11 @@
 import express from "express";
 import EventoPersonal from "../models/EventoPersonal.js";
+import { protect } from "../../middleware/auth.js";
 
 const router = express.Router();
 
-// Crear
-router.post("/", async (req, res) => {
+// Crear (requiere autenticación)
+router.post("/", protect, async (req, res) => {
   try {
     const data = req.body;
     // valida que start < end
@@ -34,40 +35,81 @@ router.get("/:id", async (req, res) => {
 });
 
 // Listar por owner y rango de fechas (útil para calendario)
-router.get("/", async (req, res) => {
+// También incluye eventos "shared" de profesores si el usuario es alumno
+router.get("/", protect, async (req, res) => {
   try {
-    const { owner, start, end } = req.query;
+    const { owner, start, end, userId, userRole } = req.query;
     const q = {};
-    if (owner) q.owner = owner;
-    if (start && end) {
-      q.$or = [
-        { start: { $lt: new Date(end) }, end: { $gt: new Date(start) } },
-        // si manejas recurrencias, debes generar ocurrencias desde rules
-      ];
+    
+    // Verificar que el usuario autenticado coincide con userId
+    if (userId && req.user._id.toString() !== userId) {
+      return res.status(403).json({ error: "forbidden", message: "No puedes acceder a eventos de otro usuario" });
     }
-    const docs = await EventoPersonal.find(q).sort({ start: 1 }).limit(100).lean();
+    
+    // Si es alumno, incluir eventos propios Y eventos compartidos de profesores
+    if (userRole === 'alumno' && userId) {
+      q.$or = [
+        { owner: userId }, // Eventos propios
+        { visibility: 'shared' } // Eventos compartidos por profesores
+      ];
+    } else if (owner) {
+      // Para profesores y otros, solo mostrar sus propios eventos
+      q.owner = owner;
+    }
+    
+    // Filtrar por rango de fechas si se proporciona
+    if (start && end) {
+      q.start = { $lt: new Date(end) };
+      q.end = { $gt: new Date(start) };
+    }
+    
+    const docs = await EventoPersonal.find(q)
+      .populate('owner', 'name email rol')
+      .sort({ start: 1 })
+      .limit(100)
+      .lean();
     res.json(docs);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Actualizar
-router.put("/:id", async (req, res) => {
+// Actualizar (solo el dueño puede actualizar)
+router.put("/:id", protect, async (req, res) => {
   try {
-    const ev = await EventoPersonal.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    const ev = await EventoPersonal.findById(req.params.id);
     if (!ev) return res.status(404).json({ error: "not_found" });
+    
+    // Verificar que el usuario es el dueño
+    if (ev.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: "forbidden", message: "No tienes permiso para editar este evento" });
+    }
+    
+    // Validar fechas
+    if (req.body.start && req.body.end && new Date(req.body.start) >= new Date(req.body.end)) {
+      return res.status(400).json({ error: "invalid_dates", message: "La fecha de inicio debe ser anterior a la de fin" });
+    }
+    
+    Object.assign(ev, req.body);
+    await ev.save();
     res.json(ev);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 });
 
-// Borrar
-router.delete("/:id", async (req, res) => {
+// Borrar (solo el dueño puede borrar)
+router.delete("/:id", protect, async (req, res) => {
   try {
-    const ev = await EventoPersonal.findByIdAndDelete(req.params.id);
+    const ev = await EventoPersonal.findById(req.params.id);
     if (!ev) return res.status(404).json({ error: "not_found" });
+    
+    // Verificar que el usuario es el dueño
+    if (ev.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: "forbidden", message: "No tienes permiso para borrar este evento" });
+    }
+    
+    await EventoPersonal.findByIdAndDelete(req.params.id);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
