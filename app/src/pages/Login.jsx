@@ -73,6 +73,12 @@ const Login = ({ setUser }) => {
       }
 
       const data = await res.json();
+      
+      // Guardar token en localStorage
+      if (data.token) {
+        localStorage.setItem('authToken', data.token);
+      }
+      
       setUser(data.user);
       navigate("/dashboard");
     } catch (err) {

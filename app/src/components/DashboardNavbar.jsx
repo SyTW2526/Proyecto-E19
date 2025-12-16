@@ -12,6 +12,7 @@ const DashboardNavbar = ({ user, setUser }) => {
 
   const handleLogout = async () => {
     await fetchApi('/api/auth/logout', { method: 'POST' });
+    localStorage.removeItem('authToken'); // Limpiar token
     setUser(null);
     navigate("/");
   };

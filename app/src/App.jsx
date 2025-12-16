@@ -55,6 +55,15 @@ function App() {
   useEffect(() => {
     const fetchUser = async() => {
       try {
+        // Verificar si hay token guardado
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          console.log('[App] No hay token guardado');
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+
         console.log('[App] Verificando sesión...');
         const res = await fetchApi('/api/auth/me');
         console.log('[App] Respuesta /api/auth/me:', res.status);
@@ -64,10 +73,12 @@ function App() {
           setUser(data);
         } else {
           console.log('[App] No hay sesión activa');
+          localStorage.removeItem('authToken'); // Limpiar token inválido
           setUser(null);
         }
       } catch(err) {
         console.error('[App] Error verificando sesión:', err);
+        localStorage.removeItem('authToken'); // Limpiar token inválido
         setUser(null);
       } finally {
         setLoading(false);
