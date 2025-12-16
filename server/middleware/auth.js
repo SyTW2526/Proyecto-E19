@@ -5,47 +5,46 @@ export const protect = async (req, res, next) => {
   try {
     let token;
 
-    // Obtener token de cookies o header Authorization
-    if (req.cookies && req.cookies.token) {
+    // Obtener token de cookie o header
+    if (req.cookies.token) {
       token = req.cookies.token;
-    } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    } else if (req.headers.authorization?.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
     }
 
     if (!token) {
-      return res.status(401).json({ error: 'not_authenticated', message: 'No estás autenticado' });
+      return res.status(401).json({ error: 'No autorizado - Token no encontrado' });
     }
 
     // Verificar token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Buscar usuario en la colección User (no Recurso)
-    const user = await User.findById(decoded.id).select('-password');
-    
-    if (!user) {
-      return res.status(401).json({ error: 'user_not_found', message: 'Usuario no encontrado' });
+    // OPTIMIZACIÓN: Seleccionar solo campos necesarios
+    req.user = await User.findById(decoded.id)
+      .select('-password -__v') // Excluir password y __v
+      .lean(); // Usar lean() para objetos planos (mejor rendimiento)
+
+    if (!req.user) {
+      return res.status(401).json({ error: 'Usuario no encontrado' });
     }
 
-    // Verificar que el usuario esté activo
-    if (user.activo === false) {
-      return res.status(401).json({ error: 'user_inactive', message: 'Usuario inactivo' });
+    // Verificar si el usuario está activo
+    if (!req.user.activo) {
+      return res.status(403).json({ error: 'Usuario inactivo' });
     }
 
-    // Agregar usuario a req
-    req.user = user;
     next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
+    console.error('Error en middleware protect:', error);
     
     if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({ error: 'invalid_token', message: 'Token inválido' });
+      return res.status(401).json({ error: 'Token inválido' });
     }
-    
     if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: 'token_expired', message: 'Token expirado' });
+      return res.status(401).json({ error: 'Token expirado' });
     }
     
-    return res.status(401).json({ error: 'authentication_failed', message: 'Fallo en la autenticación' });
+    res.status(500).json({ error: 'Error de servidor en autenticación' });
   }
 };
 
@@ -53,13 +52,12 @@ export const protect = async (req, res, next) => {
 export const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({ error: 'not_authenticated', message: 'No estás autenticado' });
+      return res.status(401).json({ error: 'No autorizado' });
     }
 
     if (!roles.includes(req.user.rol)) {
       return res.status(403).json({ 
-        error: 'forbidden', 
-        message: `Rol ${req.user.rol} no tiene permisos. Se requiere uno de: ${roles.join(', ')}` 
+        error: `Rol ${req.user.rol} no autorizado para esta acción` 
       });
     }
 

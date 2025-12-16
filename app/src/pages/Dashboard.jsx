@@ -26,7 +26,7 @@ function Dashboard({ user }) {
   };
 
   const sectionDescriptions = {
-    dashboard: 'Gestiona tu actividad académica desde aquí',
+    dashboard: '',
     tutorias: 'Reserva y gestiona tus tutorías con profesores',
     espacios: 'Reserva espacios de estudio y salas',
     calendario: 'Visualiza todos tus eventos y reservas',
@@ -82,7 +82,10 @@ function Dashboard({ user }) {
               <button
                 key={item.id}
                 onClick={() => {
-                  if (item.section && item.section !== currentSection) {
+                  if (item.path) {
+                    // Si tiene path, navegar a esa ruta
+                    navigate(item.path);
+                  } else if (item.section && item.section !== currentSection) {
                     navigateToSection(item.section);
                   }
                   setSidebarOpen(false);

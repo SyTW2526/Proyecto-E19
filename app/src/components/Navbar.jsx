@@ -172,8 +172,12 @@ const Navbar = ({user, setUser}) => {
         }
       ]
     },
-    { title: 'Preguntas Frecuentes', hasItems: false },
-    { title: 'Sobre nosotros', hasItems: false }
+    { 
+      title: 'Campus virtual', 
+      hasItems: false,
+      onClick: () => window.open('https://campusvirtual.ull.es/2526/ingenieriaytecnologia/login/index.php?authCAS=NOCAS', '_blank')
+    },
+    { title: 'Sobre nosotros', hasItems: false, link: '/about' }
   ];
 
   // Seleccionar el menú apropiado según si el usuario está logueado
@@ -203,25 +207,35 @@ const Navbar = ({user, setUser}) => {
         <div className="hidden lg:flex items-center gap-4 xl:gap-8">
           {menuSections.map((section, idx) => (
             <div key={idx} className="relative" ref={idx === 0 ? navDropdownRef : null}>
-              <button
-                onMouseEnter={() => {
-                  if (closeTimeoutRef.current) {
-                    clearTimeout(closeTimeoutRef.current);
-                    closeTimeoutRef.current = null;
-                  }
-                  setActiveDropdown(idx);
-                  if (idx === 0) setActiveCourse(0);
-                }}
-                onMouseLeave={() => {
-                  closeTimeoutRef.current = setTimeout(() => {
-                    setActiveDropdown(null);
-                    setActiveCourse(null);
-                  }, 300);
-                }}
-                className="text-sm xl:text-base font-semibold text-gray-800 hover:text-[#7024BB] transition-colors py-2 px-2"
-              >
-                {section.title}
-              </button>
+              {section.link ? (
+                <Link
+                  to={section.link}
+                  className="text-sm xl:text-base font-semibold text-gray-800 hover:text-[#7024BB] transition-colors py-2 px-2"
+                >
+                  {section.title}
+                </Link>
+              ) : (
+                <button
+                  onClick={section.onClick ? section.onClick : undefined}
+                  onMouseEnter={() => {
+                    if (closeTimeoutRef.current) {
+                      clearTimeout(closeTimeoutRef.current);
+                      closeTimeoutRef.current = null;
+                    }
+                    setActiveDropdown(idx);
+                    if (idx === 0) setActiveCourse(0);
+                  }}
+                  onMouseLeave={() => {
+                    closeTimeoutRef.current = setTimeout(() => {
+                      setActiveDropdown(null);
+                      setActiveCourse(null);
+                    }, 300);
+                  }}
+                  className="text-sm xl:text-base font-semibold text-gray-800 hover:text-[#7024BB] transition-colors py-2 px-2"
+                >
+                  {section.title}
+                </button>
+              )}
 
             {activeDropdown === idx && section.hasItems && (
               <div 
