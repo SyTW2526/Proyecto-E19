@@ -12,9 +12,9 @@ services:
       - ./server:/app:delegated
       - /app/node_modules
     environment:
-      - MONGO_URI=mongodb+srv://UsuarioSyTW:123456789A@ullcalendar.4qwjtgm.mongodb.net/proyecto-e19-dev?retryWrites=true&w=majority
+      - MONGO_URI=${MONGO_URI}
       - NODE_ENV=development
-      - JWT_SECRET=dev-secret-key
+      - JWT_SECRET=${JWT_SECRET}
       - PORT=4000
       - FRONTEND_URL=http://localhost:5173
     command: npm run dev
