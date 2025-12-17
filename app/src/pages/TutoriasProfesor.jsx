@@ -287,7 +287,6 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
         try {
           const res = await fetchApi(`/api/tutorias/${encodeURIComponent(id)}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ estado: 'confirmada' }),
           });
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -311,7 +310,6 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
         try {
           const res = await fetchApi(`/api/tutorias/${encodeURIComponent(id)}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ estado: 'Cancelada' }),
           });
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -344,7 +342,6 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
             try {
               const res = await fetchApi(`/api/tutorias/${encodeURIComponent(id)}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   fechaInicio: new Date(nuevoInicio).toISOString(),
                   fechaFin: new Date(nuevoFin).toISOString(),
@@ -377,7 +374,6 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
         try {
           const res = await fetchApi(`/api/horarios/${encodeURIComponent(reserva._id)}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ activo: !reserva.activo }),
           });
           if (!res.ok) throw new Error('Error al actualizar reserva');
@@ -512,7 +508,6 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
       
       const res = await fetchApi('/api/horarios', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
       
@@ -635,7 +630,6 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
       const payload = { ...editValues };
       const res = await fetchApi(`/api/horarios/${encodeURIComponent(id)}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
       if (!res.ok) {

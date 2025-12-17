@@ -26,7 +26,7 @@ function ReservaEspacios({ menu, activeSubsection }) {
   const fetchSpaces = async () => {
     try {
       setLoading(true);
-      const res = await fetchApi('/api/recursos', { credentials: 'include' });
+      const res = await fetchApi('/api/recursos');
       if (!res.ok) throw new Error(`Error ${res.status}`);
       const data = await res.json();
       setSpaces(data);
@@ -40,7 +40,7 @@ function ReservaEspacios({ menu, activeSubsection }) {
 
   const fetchReservationsFor = async (spaceId) => {
     try {
-      const res = await fetchApi(`/api/recursos/${spaceId}/reservas`, { credentials: 'include' });
+      const res = await fetchApi(`/api/recursos/${spaceId}/reservas`);
       if (!res.ok) throw new Error(`Error ${res.status}`);
       const data = await res.json();
       setReservas(data);
@@ -88,8 +88,6 @@ function ReservaEspacios({ menu, activeSubsection }) {
       const body = { fechaReserva: new Date(inicio).toISOString() };
       const res = await fetchApi(`/api/recursos/${selected._id}/reservas`, {
         method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
 

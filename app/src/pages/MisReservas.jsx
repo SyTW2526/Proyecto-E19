@@ -62,8 +62,7 @@ function MisReservas() {
     try {
       setLoading(true);
       const res = await fetchApi(`/api/recursos/${reservaToCancel.recurso?._id}/reservas/${reservaToCancel._id}`, {
-        method: 'DELETE',
-        credentials: 'include'
+        method: 'DELETE'
       });
       
       if (!res.ok) {
@@ -103,8 +102,6 @@ function MisReservas() {
       
       const res = await fetchApi(`/api/recursos/${reservaToEdit.recurso?._id}/reservas/${reservaToEdit._id}`, {
         method: 'PUT',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fechaReserva: fecha.toISOString() })
       });
       

@@ -181,7 +181,6 @@ function TutoriasAlumno({ menu, activeSubsection, user }) {
       };
       const res = await fetchApi('/api/tutorias', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       if (!res.ok) {

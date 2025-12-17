@@ -278,7 +278,6 @@ function Calendario({ user }) {
     try {
       const res = await fetchApi('/api/eventos', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: newEvent.title,
           description: newEvent.description,
