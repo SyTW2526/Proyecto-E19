@@ -51,26 +51,12 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Obtener horarios de un profesor
-router.get("/:profesorId", async (req, res) => {
-  try {
-    const horarios = await HorarioTutoria.find({
-      profesor: req.params.profesorId,
-      activo: true
-    })
-    .lean();
-
-    res.json(horarios);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 /* ===========================================================
    DISPONIBILIDAD
    =========================================================== */
 
 // Obtener huecos disponibles en una fecha concreta
+// IMPORTANTE: Esta ruta debe ir ANTES de /:profesorId para evitar conflictos
 router.get("/disponibilidad", async (req, res) => {
   try {
     const { profesor, fecha } = req.query;
@@ -103,6 +89,21 @@ router.get("/disponibilidad", async (req, res) => {
     .lean();
 
     res.json({ horarios, reservas });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Obtener horarios de un profesor (todos, incluyendo pausados)
+router.get("/:profesorId", async (req, res) => {
+  try {
+    const horarios = await HorarioTutoria.find({
+      profesor: req.params.profesorId
+    })
+    .sort({ diaSemana: 1, horaInicio: 1 })
+    .lean();
+
+    res.json(horarios);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -235,6 +236,47 @@ router.put("/:id", async (req, res) => {
     if (horaInicio) update.horaInicio = horaInicio;
     if (horaFin) update.horaFin = horaFin;
     if (typeof activo !== "undefined") update.activo = activo;
+
+    const horario = await HorarioTutoria.findByIdAndUpdate(req.params.id, update, {
+      new: true,
+      runValidators: true
+    });
+
+    if (!horario) {
+      return res.status(404).json({ error: "Horario no encontrado." });
+    }
+
+    res.json(horario);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH: actualización parcial (ej: solo cambiar activo)
+router.patch("/:id", async (req, res) => {
+  try {
+    const update = {};
+    const { activo, profesor, asignatura, modalidad, lugar, diaSemana, horaInicio, horaFin } = req.body;
+    
+    // Validar solo los campos que vienen
+    if (typeof activo !== "undefined") update.activo = activo;
+    if (profesor) {
+      const esProfesor = await User.findById(profesor);
+      if (!esProfesor || esProfesor.rol !== "profesor") {
+        return res.status(400).json({ error: "El usuario no es profesor." });
+      }
+      update.profesor = profesor;
+    }
+    if (asignatura) update.asignatura = asignatura;
+    if (modalidad) update.modalidad = modalidad;
+    if (lugar) update.lugar = lugar;
+    if (diaSemana) update.diaSemana = diaSemana;
+    if (horaInicio) update.horaInicio = horaInicio;
+    if (horaFin) update.horaFin = horaFin;
+
+    if (Object.keys(update).length === 0) {
+      return res.status(400).json({ error: "No hay campos para actualizar." });
+    }
 
     const horario = await HorarioTutoria.findByIdAndUpdate(req.params.id, update, {
       new: true,

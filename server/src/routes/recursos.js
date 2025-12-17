@@ -1,6 +1,6 @@
 import express from "express";
 import Recurso, { ReservaRecurso } from "../models/Recurso.js";
-import { protect } from "../../middleware/auth.js";
+import { protect, authorize } from "../../middleware/auth.js";
 
 const router = express.Router();
 
@@ -26,8 +26,8 @@ router.get('/mis-reservas', protect, async (req, res) => {
 
 // ====== RUTAS GENERALES DE RECURSOS ======
 
-// Crear recurso
-router.post("/", async (req, res) => {
+// Crear recurso (solo desarrolladores)
+router.post("/", protect, authorize('desarrollador'), async (req, res) => {
   try {
     const data = req.body;
     if (!data.nombre || !data.tipo) {
@@ -77,8 +77,8 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// Actualizar
-router.put("/:id", async (req, res) => {
+// Actualizar (solo desarrolladores)
+router.put("/:id", protect, authorize('desarrollador'), async (req, res) => {
   try {
     const r = await Recurso.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
     if (!r) return res.status(404).json({ error: "not_found" });
@@ -88,8 +88,8 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// Borrar
-router.delete("/:id", async (req, res) => {
+// Borrar (solo desarrolladores)
+router.delete("/:id", protect, authorize('desarrollador'), async (req, res) => {
   try {
     const r = await Recurso.findByIdAndDelete(req.params.id);
     if (!r) return res.status(404).json({ error: "not_found" });
@@ -104,10 +104,16 @@ router.delete("/:id", async (req, res) => {
 // Crear reserva de recurso (usuario autenticado requerido)
 router.post('/:id/reservas', protect, async (req, res) => {
   try {
-    const { fechaReserva } = req.body;
+    const { fechaReserva, duracionHoras = 1 } = req.body;
 
     if (!fechaReserva) {
       return res.status(400).json({ error: 'missing_fields', details: 'fechaReserva is required' });
+    }
+
+    // Validar duración
+    const duracion = parseFloat(duracionHoras);
+    if (isNaN(duracion) || duracion < 0.5 || duracion > 8) {
+      return res.status(400).json({ error: 'invalid_duration', details: 'duracionHoras debe estar entre 0.5 y 8' });
     }
 
     // Verificar que el recurso existe y está activo
@@ -115,29 +121,49 @@ router.post('/:id/reservas', protect, async (req, res) => {
     if (!recurso) return res.status(404).json({ error: 'recurso_not_found' });
     if (!recurso.estaActivo) return res.status(400).json({ error: 'recurso_inactive' });
 
-    const fecha = new Date(fechaReserva);
-    if (isNaN(fecha)) return res.status(400).json({ error: 'invalid_date' });
+    const fechaInicio = new Date(fechaReserva);
+    if (isNaN(fechaInicio)) return res.status(400).json({ error: 'invalid_date' });
 
-    // Comprobar reservas existentes el mismo día
-    const startOfDay = new Date(fecha);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(fecha);
-    endOfDay.setHours(23, 59, 59, 999);
+    // Calcular fecha de fin de la reserva
+    const fechaFin = new Date(fechaInicio);
+    fechaFin.setHours(fechaFin.getHours() + duracion);
 
-    const reservaExistente = await ReservaRecurso.findOne({
+    // DETECCIÓN DE COLISIONES MEJORADA:
+    // Buscar reservas que se solapen con el rango [fechaInicio, fechaFin]
+    // Una reserva colisiona si:
+    // - Su inicio está dentro del rango: fechaInicio <= reserva.inicio < fechaFin
+    // - Su fin está dentro del rango: fechaInicio < reserva.fin <= fechaFin  
+    // - Envuelve el rango: reserva.inicio <= fechaInicio Y reserva.fin >= fechaFin
+    
+    const reservasExistentes = await ReservaRecurso.find({
       recurso: req.params.id,
-      fechaReserva: { $gte: startOfDay, $lte: endOfDay },
       estado: { $ne: 'cancelada' }
-    }).select('_id').lean();
+    }).select('fechaReserva duracionHoras').lean();
 
-    if (reservaExistente) {
-      return res.status(409).json({ error: 'already_reserved', details: 'Resource already reserved for this date' });
+    // Comprobar colisiones manualmente
+    const hayColision = reservasExistentes.some(reserva => {
+      const inicioExistente = new Date(reserva.fechaReserva);
+      const finExistente = new Date(inicioExistente);
+      finExistente.setHours(finExistente.getHours() + (reserva.duracionHoras || 1));
+
+      // Verificar si hay solapamiento
+      // Colisión si: (inicio1 < fin2) Y (fin1 > inicio2)
+      return fechaInicio < finExistente && fechaFin > inicioExistente;
+    });
+
+    if (hayColision) {
+      return res.status(409).json({ 
+        error: 'already_reserved', 
+        details: 'El recurso ya está reservado en ese horario. Por favor, elige otra hora.' 
+      });
     }
 
+    // Crear la reserva
     const reserva = new ReservaRecurso({
       recurso: req.params.id,
       usuario: req.user._id,
-      fechaReserva: fecha
+      fechaReserva: fechaInicio,
+      duracionHoras: duracion
     });
 
     await reserva.save();

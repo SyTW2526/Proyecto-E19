@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Perfil from './pages/Perfil';
+import AboutUs from './pages/AboutUs';
 import { NavigationProvider } from './contexts/NavigationContext';
 import { fetchApi } from './config/api';
 
@@ -34,6 +35,7 @@ function AppContent({ user, setUser, loading }) {
       )}
       <Routes>
         <Route path="/" element={<Home setUser={setUser} />} />
+        <Route path="/about" element={<AboutUs />} />
         <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login setUser={setUser} />} />
         <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register setUser={setUser} />} />
         <Route path="/dashboard" element={user ? <Dashboard user={user} /> : <Navigate to="/login" />} />
@@ -53,6 +55,15 @@ function App() {
   useEffect(() => {
     const fetchUser = async() => {
       try {
+        // Verificar si hay token guardado
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          console.log('[App] No hay token guardado');
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+
         console.log('[App] Verificando sesión...');
         const res = await fetchApi('/api/auth/me');
         console.log('[App] Respuesta /api/auth/me:', res.status);
@@ -62,10 +73,12 @@ function App() {
           setUser(data);
         } else {
           console.log('[App] No hay sesión activa');
+          localStorage.removeItem('authToken'); // Limpiar token inválido
           setUser(null);
         }
       } catch(err) {
         console.error('[App] Error verificando sesión:', err);
+        localStorage.removeItem('authToken'); // Limpiar token inválido
         setUser(null);
       } finally {
         setLoading(false);

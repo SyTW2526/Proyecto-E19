@@ -23,6 +23,23 @@ const UserSchema = new Schema({
 // Índices para mejorar rendimiento
 // NOTA: No duplicar email aquí (ya tiene unique: true arriba)
 UserSchema.index({ rol: 1, activo: 1 });
-UserSchema.index({ name: 1 });
+UserSchema.index({ activo: 1 });
+
+// Excluir password por defecto en todas las queries
+UserSchema.set('toJSON', {
+  transform: function(doc, ret) {
+    delete ret.password;
+    delete ret.__v;
+    return ret;
+  }
+});
+
+// Método para buscar usuarios activos por rol (optimizado)
+UserSchema.statics.findActiveByRole = function(role, limit = 50) {
+  return this.find({ rol: role, activo: true })
+    .select('-password')
+    .limit(limit)
+    .lean();
+};
 
 export default model("User", UserSchema);

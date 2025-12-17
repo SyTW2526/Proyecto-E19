@@ -17,3 +17,5 @@ coverage/
 .nuxt/
 .serverless/
 .turbo/
+
+.env

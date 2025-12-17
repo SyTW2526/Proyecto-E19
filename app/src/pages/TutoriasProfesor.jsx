@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import Icon from '../components/Icon';
+import { fetchApi } from '../config/api';
+import { ConfirmModal, AlertModal, PromptModal } from '../components/Modal';
 
 function TutoriasProfesor({ menu, activeSubsection, user }) {
   const item = (menu || []).find((m) => m.id === activeSubsection) || {};
@@ -59,11 +61,11 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
   // mis tutorías (confirmadas) para el profesor actual
   const [mySessions, setMySessions] = useState([]);
   const [loadingMySessions, setLoadingMySessions] = useState(false);
-  // estado para modal de detalles de sesión
-  const [selectedSession, setSelectedSession] = useState(null);
-  // emails resueltos para mostrar en el modal (usamos solo el setter para evitar warning si no se leen directamente)
-  const [, setProfEmail] = useState(null);
-  const [, setStudentEmail] = useState(null);
+  
+  // Estados para modales custom
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' });
+  const [alertModal, setAlertModal] = useState({ isOpen: false, title: '', message: '', variant: 'info' });
+  const [promptModal, setPromptModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, placeholder: '', defaultValue: '' });
   
   // helper para calcular fin de semana (end)
   const endOfWeek = (start) => {
@@ -174,9 +176,6 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
     setWeekStart(startOfWeek(d));
   };
 
-  const openSession = (s) => setSelectedSession(s);
-  const closeSession = () => setSelectedSession(null);
-
   // helper para mostrar nombre/usuario/email si el campo viene poblado como objeto
   const personLabel = (p) => {
     if (!p) return '';
@@ -184,45 +183,6 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
     // p puede ser un objeto con distintos campos según el back
     return p.username || p.email || p.name || p.fullName || p.displayName || String(p._id || '') ;
   };
- 
-  // Cuando se abre una sesión, resolver emails para profesor y estudiante desde la API
-  useEffect(() => {
-    if (!selectedSession) {
-      setProfEmail(null);
-      setStudentEmail(null);
-      return;
-    }
-    let aborted = false;
-    const controller = new AbortController();
-
-    const fetchEmail = async (idOrObj) => {
-      if (!idOrObj) return null;
-      const id = typeof idOrObj === 'string' ? idOrObj : (idOrObj._id || idOrObj.id || null);
-      if (!id) return null;
-      try {
-        const res = await fetchApi(`/api/users/${encodeURIComponent(id)}`, { signal: controller.signal });
-        if (!res.ok) return null;
-        const data = await res.json();
-        return data.email || data.username || data.name || null;
-      } catch (err) {
-        if (err.name === 'AbortError') return null;
-        return null;
-      }
-    };
-
-    (async () => {
-      const prof = await fetchEmail(selectedSession.profesor);
-      const stud = await fetchEmail(selectedSession.estudiante);
-      if (aborted) return;
-      setProfEmail(prof || personLabel(selectedSession.profesor));
-      setStudentEmail(stud || personLabel(selectedSession.estudiante));
-    })();
-
-    return () => {
-      aborted = true;
-      controller.abort();
-    };
-  }, [selectedSession]);
   
   // --- Nuevas constantes para layout del calendario ---
   const dayStartHour = 8;
@@ -254,9 +214,10 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
   // helper para obtener id de usuario actual (ajusta si tu auth difiere)
   const getCurrentUserId = () => {
     // Preferir user pasado por props (user._id | user.id), fallback a localStorage
-    if (user && (user._id || user.id)) return user._id || user.id;
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem('userId') || null;
+    const userId = user && (user._id || user.id) ? (user._id || user.id) : 
+                   (typeof window !== 'undefined' ? localStorage.getItem('userId') : null);
+    console.log('getCurrentUserId:', userId, 'user:', user);
+    return userId;
   };
   
   // --- solicitudes pendientes: cargar y acciones (usa el ObjectId del usuario actual) ---
@@ -317,92 +278,146 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
   }, [tab]);
 
   const acceptRequest = async (id) => {
-    if (!confirm('Aceptar esta tutoría?')) return;
-    try {
-      const res = await fetchApi(`/api/tutorias/${encodeURIComponent(id)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estado: 'confirmada' }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      await loadPendingRequests();
-    } catch (err) {
-      console.error('acceptRequest (PUT) error', err);
-      alert('No se pudo aceptar la solicitud.');
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Aceptar tutoría',
+      message: '¿Confirmar esta solicitud de tutoría?',
+      variant: 'success',
+      onConfirm: async () => {
+        try {
+          const res = await fetchApi(`/api/tutorias/${encodeURIComponent(id)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ estado: 'confirmada' }),
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          await loadPendingRequests();
+          setAlertModal({ isOpen: true, title: 'Éxito', message: 'Tutoría aceptada correctamente', variant: 'success' });
+        } catch (err) {
+          console.error('acceptRequest (PUT) error', err);
+          setAlertModal({ isOpen: true, title: 'Error', message: 'No se pudo aceptar la solicitud.', variant: 'error' });
+        }
+      }
+    });
   };
 
   const cancelRequest = async (id) => {
-    if (!confirm('¿Eliminar esta tutoría (marcar como cancelada)?')) return;
-    try {
-      const res = await fetchApi(`/api/tutorias/${encodeURIComponent(id)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estado: 'Cancelada' }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      // recargar la lista de pendientes
-      await loadPendingRequests();
-    } catch (err) {
-      console.error('cancelRequest (PUT) error', err);
-      alert('No se pudo eliminar/la marcar la solicitud como cancelada.');
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Cancelar tutoría',
+      message: '¿Marcar esta tutoría como cancelada?',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          const res = await fetchApi(`/api/tutorias/${encodeURIComponent(id)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ estado: 'Cancelada' }),
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          await loadPendingRequests();
+          setAlertModal({ isOpen: true, title: 'Cancelada', message: 'Tutoría cancelada correctamente', variant: 'success' });
+        } catch (err) {
+          console.error('cancelRequest (PUT) error', err);
+          setAlertModal({ isOpen: true, title: 'Error', message: 'No se pudo cancelar la solicitud.', variant: 'error' });
+        }
+      }
+    });
   };
 
   const reprogramRequest = async (id) => {
-    const nuevoInicio = prompt('Nueva fecha/hora de inicio (ISO o YYYY-MM-DDTHH:MM):');
-    if (!nuevoInicio) return;
-    const nuevoFin = prompt('Nueva fecha/hora de fin (ISO o YYYY-MM-DDTHH:MM):', nuevoInicio);
-    if (!nuevoFin) return;
-    try {
-      const res = await fetchApi(`/api/tutorias/${encodeURIComponent(id)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fechaInicio: new Date(nuevoInicio).toISOString(),
-          fechaFin: new Date(nuevoFin).toISOString(),
-          estado: 'Reprogramada',
-        }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      await loadPendingRequests();
-    } catch (err) {
-      console.error('reprogramRequest (PUT) error', err);
-      alert('No se pudo reprogramar la solicitud.');
-    }
+    setPromptModal({
+      isOpen: true,
+      title: 'Reprogramar tutoría',
+      message: 'Nueva fecha/hora de inicio (YYYY-MM-DDTHH:MM):',
+      placeholder: '2025-12-20T10:00',
+      onConfirm: async (nuevoInicio) => {
+        if (!nuevoInicio) return;
+        setPromptModal({
+          isOpen: true,
+          title: 'Reprogramar tutoría',
+          message: 'Nueva fecha/hora de fin (YYYY-MM-DDTHH:MM):',
+          placeholder: '2025-12-20T11:00',
+          defaultValue: nuevoInicio,
+          onConfirm: async (nuevoFin) => {
+            if (!nuevoFin) return;
+            try {
+              const res = await fetchApi(`/api/tutorias/${encodeURIComponent(id)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  fechaInicio: new Date(nuevoInicio).toISOString(),
+                  fechaFin: new Date(nuevoFin).toISOString(),
+                  estado: 'Reprogramada',
+                }),
+              });
+              if (!res.ok) throw new Error(`HTTP ${res.status}`);
+              await loadPendingRequests();
+              setAlertModal({ isOpen: true, title: 'Éxito', message: 'Tutoría reprogramada correctamente', variant: 'success' });
+            } catch (err) {
+              console.error('reprogramRequest (PUT) error', err);
+              setAlertModal({ isOpen: true, title: 'Error', message: 'No se pudo reprogramar la solicitud.', variant: 'error' });
+            }
+          }
+        });
+      }
+    });
   };
 
   // --- Nuevo: funciones para el menú de acciones en tabla de reservas ---
   const onToggleReserva = async (reserva) => {
     if (!reserva._id) return;
-    const nuevaReserva = { ...reserva, activo: !reserva.activo };
-    try {
-      const res = await fetchApi(`/api/horarios/${encodeURIComponent(reserva._id)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ activo: nuevaReserva.activo }),
-      });
-      if (!res.ok) throw new Error('Error al actualizar reserva');
-      setLocalReservas((prev) =>
-        prev.map((r) => (r._id === reserva._id ? nuevaReserva : r))
-      );
-    } catch (err) {
-      console.error('Error toggling reserva', err);
-      alert('Error al actualizar reserva');
-    }
+    const accion = reserva.activo ? 'pausar' : 'activar';
+    setConfirmModal({
+      isOpen: true,
+      title: `${accion.charAt(0).toUpperCase() + accion.slice(1)} horario`,
+      message: `¿Estás seguro de ${accion} este horario de tutoría?`,
+      variant: 'warning',
+      onConfirm: async () => {
+        try {
+          const res = await fetchApi(`/api/horarios/${encodeURIComponent(reserva._id)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ activo: !reserva.activo }),
+          });
+          if (!res.ok) throw new Error('Error al actualizar reserva');
+          
+          // Recargar horarios desde servidor
+          await loadUserSchedules();
+          
+          setAlertModal({ 
+            isOpen: true, 
+            title: 'Éxito', 
+            message: `Horario ${accion === 'pausar' ? 'pausado' : 'activado'} correctamente`, 
+            variant: 'success' 
+          });
+        } catch (err) {
+          console.error('Error toggling reserva', err);
+          setAlertModal({ isOpen: true, title: 'Error', message: 'No se pudo actualizar la reserva', variant: 'error' });
+        }
+      }
+    });
   };
 
   const onDeleteReserva = async (reserva) => {
     if (!reserva._id) return;
-    if (!confirm('¿Borrar esta reserva?')) return;
-    try {
-      const res = await fetchApi(`/api/horarios/${encodeURIComponent(reserva._id)}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Error al borrar reserva');
-      setLocalReservas((prev) => prev.filter((r) => r._id !== reserva._id));
-    } catch (err) {
-      console.error('Error deleting reserva', err);
-      alert('Error al borrar reserva');
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Borrar horario',
+      message: '¿Estás seguro de eliminar este horario de tutoría?',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          const res = await fetchApi(`/api/horarios/${encodeURIComponent(reserva._id)}`, { method: 'DELETE' });
+          if (!res.ok) throw new Error('Error al borrar reserva');
+          setLocalReservas((prev) => prev.filter((r) => r._id !== reserva._id));
+          setAlertModal({ isOpen: true, title: 'Éxito', message: 'Horario eliminado correctamente', variant: 'success' });
+        } catch (err) {
+          console.error('Error deleting reserva', err);
+          setAlertModal({ isOpen: true, title: 'Error', message: 'No se pudo borrar el horario', variant: 'error' });
+        }
+      }
+    });
   };
 
   // --- Nuevo: estado y funciones para el modal de detalles ---
@@ -473,7 +488,16 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
   // crear horario en backend (/api/horarios) o guardar local si no hay usuario
   const createHorario = async (horario) => {
     const uid = getCurrentUserId();
+    console.log('createHorario - userId:', uid, 'horario:', horario);
+    
     if (!uid) {
+      console.warn('No hay userId - guardando en localStorage');
+      setAlertModal({
+        isOpen: true,
+        title: 'Advertencia',
+        message: 'No se pudo obtener tu ID de usuario. El horario se guardará localmente pero NO estará en la base de datos.',
+        variant: 'warning'
+      });
       const id = `local_${Date.now()}`;
       const toSave = { ...horario, _id: id };
       const next = [toSave, ...localReservas];
@@ -481,18 +505,39 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
       setLocalReservas(next);
       return;
     }
+    
     try {
       const payload = { ...horario, profesor: uid };
+      console.log('Enviando POST a /api/horarios:', payload);
+      
       const res = await fetchApi('/api/horarios', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error('Error creando horario');
+      
+      console.log('Respuesta POST /api/horarios:', res.status, res.ok);
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('Error del servidor:', errorData);
+        throw new Error(errorData.error || `Error ${res.status}`);
+      }
+      
+      const result = await res.json();
+      console.log('Horario creado en BD:', result);
+      
       // recargar desde servidor para evitar inconsistencias
       await loadUserSchedules();
+      setAlertModal({ isOpen: true, title: 'Éxito', message: 'Horario creado correctamente en la base de datos', variant: 'success' });
     } catch (err) {
-      console.error('createHorario error, guardando local', err);
+      console.error('createHorario error:', err);
+      setAlertModal({
+        isOpen: true,
+        title: 'Error',
+        message: `Error al guardar en base de datos: ${err.message}\n\nSe guardará localmente pero NO estará disponible para alumnos.`,
+        variant: 'error'
+      });
       const id = `local_${Date.now()}`;
       const toSave = { ...horario, _id: id };
       const next = [toSave, ...localReservas];
@@ -504,23 +549,30 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
   // eliminar horario: si viene del servidor (id no empieza por 'local_') llamar DELETE /api/horarios/:id
   const deleteHorario = async (id) => {
     if (!id) return;
-    if (!confirm('Borrar horario?')) return;
-    if (!id.startsWith('local_')) {
-      try {
-        const res = await fetchApi(`/api/horarios/${encodeURIComponent(id)}`, { method: 'DELETE' });
-        if (!res.ok) throw new Error('Error borrando');
-        // recargar desde servidor
-        await loadUserSchedules();
-        return;
-      } catch (err) {
-        console.error('deleteHorario error', err);
-        alert('No se pudo borrar en servidor. Se eliminará localmente.');
+    setConfirmModal({
+      isOpen: true,
+      title: 'Borrar horario',
+      message: '¿Estás seguro de eliminar este horario?',
+      variant: 'danger',
+      onConfirm: async () => {
+        if (!id.startsWith('local_')) {
+          try {
+            const res = await fetchApi(`/api/horarios/${encodeURIComponent(id)}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Error borrando');
+            await loadUserSchedules();
+            setAlertModal({ isOpen: true, title: 'Éxito', message: 'Horario eliminado correctamente', variant: 'success' });
+            return;
+          } catch (err) {
+            console.error('deleteHorario error', err);
+            setAlertModal({ isOpen: true, title: 'Advertencia', message: 'No se pudo borrar en servidor. Se eliminará localmente.', variant: 'warning' });
+          }
+        }
+        // fallback/local delete
+        const next = localReservas.filter((r) => r._id !== id);
+        setLocalReservas(next);
+        localStorage.setItem(reservasStorageKey(), JSON.stringify(next));
       }
-    }
-    // fallback/local delete
-    const next = localReservas.filter((r) => r._id !== id);
-    setLocalReservas(next);
-    localStorage.setItem(reservasStorageKey(), JSON.stringify(next));
+    });
   };
 
   const openCreateModal = () => {
@@ -544,7 +596,7 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
   const saveNewReserva = async () => {
     // validación básica
     if (!newReserva.asignatura || !newReserva.diaSemana || !newReserva.horaInicio || !newReserva.horaFin) {
-      alert('Rellena asignatura, día y horas.');
+      setAlertModal({ isOpen: true, title: 'Campos requeridos', message: 'Por favor rellena asignatura, día y horas.', variant: 'warning' });
       return;
     }
     const payload = {
@@ -604,7 +656,7 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
       await loadUserSchedules();
     } catch (err) {
       console.error('saveEdit error', err);
-      alert('No se pudo guardar: ' + (err.message || ''));
+      setAlertModal({ isOpen: true, title: 'Error', message: 'No se pudo guardar: ' + (err.message || ''), variant: 'error' });
     }
   };
 
@@ -937,11 +989,7 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
                             return (
                               <div
                                 key={s._id || s.id}
-                                role="button"
-                                tabIndex={0}
-                                onClick={() => openSession(s)}
-                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openSession(s); }}
-                                className="absolute left-3 right-3 rounded-lg shadow-lg cursor-pointer"
+                                className="absolute left-3 right-3 rounded-lg shadow-lg"
                                 style={{
                                   top: `${Math.max(0, minutesFromStart)}px`,
                                   height: `${blockHeight}px`,
@@ -961,64 +1009,6 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
                               </div>
                             );
                           })}
-                          {/* Modal / panel con información completa */}
-                          {selectedSession && (
-                            <div className="fixed inset-0 z-50 flex items-center justify-center">
-                              {/* overlay más claro */}
-                              <div className="absolute inset-0 bg-black/20" onClick={closeSession} />
-                              {/* modal más pequeño y con altura limitada */}
-                              <div className="relative z-10 w-full max-w-lg mx-4 bg-white rounded-lg shadow-xl overflow-auto max-h-[80vh]">
-                                <div className="flex items-start justify-between p-4 border-b">
-                                  <div>
-                                    <h3 className="text-lg font-semibold">{selectedSession.title || selectedSession.tema || 'Tutoría'}</h3>
-                                    <p className="text-sm text-gray-500">{selectedSession.place || selectedSession.lugar || ''}</p>
-                                  </div>
-                                  <button onClick={closeSession} className="text-gray-500 hover:text-gray-700 ml-4">Cerrar ✕</button>
-                                </div>
-                                <div className="p-4 space-y-3">
-                                  <div className="text-sm text-gray-700">
-                                    <strong>Hora:</strong>{' '}
-                                    {(selectedSession.startDate || selectedSession.date) ? (
-                                      <>
-                                        {(new Date(selectedSession.startDate || selectedSession.date)).toLocaleString()} {selectedSession.endDate ? ` - ${(new Date(selectedSession.endDate)).toLocaleString()}` : ''}
-                                      </>
-                                    ) : '—'}
-                                  </div>
-                                  {selectedSession.descripcion && (
-                                    <div>
-                                      <div className="text-xs text-gray-500">Descripción</div>
-                                      <div className="text-sm">{selectedSession.descripcion}</div>
-                                    </div>
-                                  )}
-                                  {selectedSession.tema && (
-                                    <div>
-                                      <div className="text-xs text-gray-500">Tema</div>
-                                      <div className="text-sm">{selectedSession.tema}</div>
-                                    </div>
-                                  )}
-                                  {selectedSession.modalidad && (
-                                    <div className="text-sm"><strong>Modalidad:</strong> {selectedSession.modalidad}</div>
-                                  )}
-                                  {selectedSession.lugar && (
-                                    <div className="text-sm"><strong>Lugar:</strong> {selectedSession.lugar}</div>
-                                  )}
-                                  {selectedSession.estado && (
-                                    <div className="text-sm"><strong>Estado:</strong> {selectedSession.estado}</div>
-                                  )}
-                                  {/* mostrar email resuelto para profesor/estudiante */}
-                                  {selectedSession.profesor && (
-                                    <div className="text-sm"><strong>Profesor:</strong> {selectedSession.profesor}</div>
-                                  )}
-                                  {selectedSession.estudiante && (
-                                    <div className="text-sm"><strong>Estudiante:</strong> {selectedSession.estudiante}</div>
-                                  )}
-                                  <div className="text-right">
-                                    <button onClick={closeSession} className="px-3 py-1 bg-violet-600 text-white rounded">Cerrar</button>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
                         </div>
                       );
                     })}
@@ -1092,8 +1082,15 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
                             </div>
                           ) : (
                             <div className="flex-1">
-                              <div className="font-semibold text-gray-900">
-                                {s.diaSemana ? `${s.diaSemana.charAt(0).toUpperCase() + s.diaSemana.slice(1)} ` : ''}{s.horaInicio}{s.horaFin ? ` - ${s.horaFin}` : ''}
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-gray-900">
+                                  {s.diaSemana ? `${s.diaSemana.charAt(0).toUpperCase() + s.diaSemana.slice(1)} ` : ''}{s.horaInicio}{s.horaFin ? ` - ${s.horaFin}` : ''}
+                                </span>
+                                {!s.activo && (
+                                  <span className="px-2 py-1 text-xs font-medium bg-amber-100 text-amber-700 rounded-full border border-amber-200">
+                                    Pausado
+                                  </span>
+                                )}
                               </div>
                               <div className="flex items-center gap-3 mt-1 text-sm text-gray-600">
                                 {s.modalidad && (
@@ -1138,6 +1135,24 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
                               </>
                             ) : (
                               <>
+                                <button
+                                  onClick={() => onToggleReserva(s)}
+                                  className={`px-3 py-2 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-1 whitespace-nowrap ${
+                                    s.activo 
+                                      ? 'bg-white hover:bg-amber-50 text-amber-600 border border-amber-300' 
+                                      : 'bg-amber-600 hover:bg-amber-700 text-white border border-amber-600'
+                                  }`}
+                                  title={s.activo ? 'Congelar horario' : 'Descongelar horario'}
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    {s.activo ? (
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    ) : (
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    )}
+                                  </svg>
+                                  {s.activo ? 'Pausar' : 'Activar'}
+                                </button>
                                 <button
                                   onClick={() => startEdit(s)}
                                   className="px-3 py-2 text-sm font-medium bg-white hover:bg-[#f5f0ff] text-[#7024BB] border border-[#7024BB] rounded-lg transition-all flex items-center justify-center gap-1 whitespace-nowrap"
@@ -1341,6 +1356,32 @@ function TutoriasProfesor({ menu, activeSubsection, user }) {
             </div>
           </div>
          )}
+
+      {/* Modales custom */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        variant={confirmModal.variant}
+      />
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        variant={alertModal.variant}
+      />
+      <PromptModal
+        isOpen={promptModal.isOpen}
+        onClose={() => setPromptModal({ ...promptModal, isOpen: false })}
+        onConfirm={promptModal.onConfirm}
+        title={promptModal.title}
+        message={promptModal.message}
+        placeholder={promptModal.placeholder}
+        defaultValue={promptModal.defaultValue}
+      />
     </div>
   );
 }

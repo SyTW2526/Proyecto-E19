@@ -10,7 +10,11 @@ router.get('/', async (req, res) => {
     const { profesorId } = req.query;
     const q = {};
     if (profesorId) {
-      q.profesor = mongoose.Types.ObjectId.isValid(profesorId) ? mongoose.Types.ObjectId(profesorId) : profesorId;
+      if (mongoose.Types.ObjectId.isValid(profesorId)) {
+        q.profesor = new mongoose.Types.ObjectId(profesorId);
+      } else {
+        q.profesor = profesorId;
+      }
     }
     const docs = await HorarioTutoria.find(q).sort({ diaSemana: 1, horaInicio: 1 }).lean();
     return res.status(200).json(docs);

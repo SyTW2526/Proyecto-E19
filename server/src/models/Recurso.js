@@ -25,7 +25,8 @@ RecursoSchema.index({ nombre: 1 });
 const ReservaRecursoSchema = new Schema({
   recurso: { type: Schema.Types.ObjectId, ref: "Recurso", required: true },
   usuario: { type: Schema.Types.ObjectId, ref: "User", required: true },
-  fechaReserva: { type: Date, required: true },
+  fechaReserva: { type: Date, required: true }, // Fecha y hora de inicio
+  duracionHoras: { type: Number, default: 1, min: 0.5, max: 8 }, // Duración en horas (0.5 = 30min, máx 8h)
   estado: { type: String, enum: ["confirmada", "cancelada", "completada"], default: "confirmada" },
   notas: { type: String }
 }, {
