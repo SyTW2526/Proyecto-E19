@@ -153,4 +153,34 @@ describe('Auth Routes', () => {
       expect(response.headers['set-cookie'][0]).toContain('token=;');
     });
   });
+
+  describe('GET /api/auth/me', () => {
+    it('debería obtener datos del usuario autenticado', async () => {
+      // Primero registrar y hacer login
+      const registerResponse = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Test Me',
+          email: 'testme@ull.edu.es',
+          password: '123456'
+        });
+
+      const token = registerResponse.body.token;
+
+      const response = await request(app)
+        .get('/api/auth/me')
+        .set('Cookie', [`token=${token}`])
+        .expect(200);
+
+      expect(response.body.name).toBe('Test Me');
+      expect(response.body.email).toBe('testme@ull.edu.es');
+      expect(response.body.password).toBeUndefined();
+    });
+
+    it('debería retornar 401 sin token', async () => {
+      await request(app)
+        .get('/api/auth/me')
+        .expect(401);
+    });
+  });
 });

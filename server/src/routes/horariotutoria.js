@@ -51,26 +51,12 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Obtener horarios de un profesor (todos, incluyendo pausados)
-router.get("/:profesorId", async (req, res) => {
-  try {
-    const horarios = await HorarioTutoria.find({
-      profesor: req.params.profesorId
-    })
-    .sort({ diaSemana: 1, horaInicio: 1 })
-    .lean();
-
-    res.json(horarios);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 /* ===========================================================
    DISPONIBILIDAD
    =========================================================== */
 
 // Obtener huecos disponibles en una fecha concreta
+// IMPORTANTE: Esta ruta debe ir ANTES de /:profesorId para evitar conflictos
 router.get("/disponibilidad", async (req, res) => {
   try {
     const { profesor, fecha } = req.query;
@@ -103,6 +89,21 @@ router.get("/disponibilidad", async (req, res) => {
     .lean();
 
     res.json({ horarios, reservas });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Obtener horarios de un profesor (todos, incluyendo pausados)
+router.get("/:profesorId", async (req, res) => {
+  try {
+    const horarios = await HorarioTutoria.find({
+      profesor: req.params.profesorId
+    })
+    .sort({ diaSemana: 1, horaInicio: 1 })
+    .lean();
+
+    res.json(horarios);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
